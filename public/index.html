@@ -163,7 +163,7 @@ function regParts(){
     <datalist id="names">${regs.map(r=>`<option value="${esc(r.name)}">`).join('')}</datalist>
     <label class="row"><input type="checkbox" id="one"> Trường hợp đặc biệt: chỉ 1 buổi</label></div>`
    :`<p>Đăng ký cho: <b>${esc(ME.name)}</b>${mine?` <span class="mute">· đã đăng ký ${mine.days.length} ngày</span>`:''}</p>`}
-   <div class="days" id="dsel">${DAYS.map((d,i)=>`<label class="${active[i]?'':'off'}${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);${adm?`showDay(${i})`:''}">${d} ${fmt(wk,i)}<br><small class="mute">${cnt[i]} người đăng ký${active[i]?' / '+CT[i].length*S.settings.perCourt+' chỗ':''}</small></label>`).join('')}<div id="dlist"></div></div>
+   <div class="days" id="dsel">${active.some(Boolean)?'':'<span class="mute">Tuần này chưa có sân nào.</span>'}${DAYS.map((d,i)=>!active[i]?'':`<label data-day="${i}" class="${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);${adm?`showDay(${i})`:''}">${d} ${fmt(wk,i)}<br><small class="mute">${cnt[i]} người đăng ký / ${CT[i].length*S.settings.perCourt} chỗ</small></label>`).join('')}<div id="dlist"></div></div>
    <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
    ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
    list:`<div class="card"><h2>Đã đăng ký (${regs.length})</h2>
@@ -175,7 +175,7 @@ function regParts(){
 const regView=()=>regParts().reg,listView=()=>regParts().list,courtsView=()=>regParts().courts;
 function showDay(i){
   viewDay=i;
-  const box=$('#dlist'),sel=$('#dsel'),chip=sel.querySelectorAll('label')[i];
+  const box=$('#dlist'),sel=$('#dsel'),chip=sel.querySelector('label[data-day="'+i+'"]');
   const rs=Object.values(S.week.registrations).filter(r=>r.days.includes(i)).sort((a,b)=>a.at.localeCompare(b.at));
   box.className='pop';
   box.innerHTML=`<b>${DAYS[i]} ${fmt(wk,i)}</b> <span class="mute">· ${rs.length} người đăng ký</span>
