@@ -171,7 +171,7 @@ function schView(){
   let used=0,cap=0,emp=0,ca=0,co=0;days.forEach(d=>{const s=sc.sessions[d];used+=s.players.length;cap+=s.capacity;emp+=Math.max(0,s.capacity-s.players.length);ca+=s.courtsAvailable;co+=s.courts.filter(c=>c.length).length});
   const regs=S.week.registrations;
   const under=Object.entries(sc.perMember).filter(([n,ds])=>ds.length<(regs[n]?.minSessions||2));
-  const mineList=Object.keys(sc.sessions).sort().map(d=>{const s=sc.sessions[d],i=s.courts.findIndex(c=>c.includes(ME.name));return i<0?null:`<li><b>${DAYS[d]} ${fmt(wk,+d)}</b> · ${cl(s.courtLabels,i)}</li>`}).filter(Boolean);
+  const mineList=Object.keys(sc.sessions).sort().map(d=>{const s=sc.sessions[d];if(!s.players.includes(ME.name))return null;const ts=[...new Set((s.courtLabels||[]).map(t=>(typeof t==='object'?t.time:t)||'').filter(Boolean))];return `<li><b>${DAYS[d]} ${fmt(wk,+d)}</b>${ts.length?' · '+esc(ts.join(' / ')):''}</li>`}).filter(Boolean);
   const mineCard=`<div class="card" style="border-color:var(--pri)"><h2>Lịch của bạn (${esc(ME.name)})</h2>${mineList.length?`<ul style="margin:0;padding-left:18px">${mineList.join('')}</ul>`:'<span class="mute">Bạn chưa được xếp buổi nào trong tuần này.</span>'}</div>`;
   return mineCard+`<div class="card kpi"><div><b>${used}/${cap}</b>chỗ đã dùng</div><div><b>${pct(cap?emp/cap:0)}</b>chỗ trống</div>
    <div><b>${co}/${ca}</b>sân có người</div><div><b>${pct(ca?1-co/ca:0)}</b>sân trống</div></div>
@@ -179,8 +179,9 @@ function schView(){
    <div class="card"><div class="row" style="justify-content:space-between"><h2>Lịch chơi</h2>${isAdmin()?'<button onclick="assign()">Phân lại</button>':''}</div>
    <div class="grid">${days.map(d=>{const s=sc.sessions[d];return `<div class="day"><b>${DAYS[d]} ${fmt(wk,+d)}</b> <span class="${s.overflow?'warn':'mute'}">${s.players.length}/${s.capacity} người</span>${s.overflow?` <span class="warn">· nới tối đa ${S.settings.maxPerCourt}/sân</span>`:''}
     <div class="bar"><i style="width:${Math.min(100,s.players.length/s.capacity*100)}%"></i></div>
-    ${s.courts.map((c,i)=>`<div class="court"><b>${cl(s.courtLabels,i)}</b> <span class="${c.length>S.settings.perCourt?'warn':'mute'}">(${c.length} người)</span><ol class="plist">${c.map(n=>`<li><span>${esc(n)}</span></li>`).join('')}</ol></div>`).join('')||'<span class="mute">Trống</span>'}
-    ${(s.courtLabels||[]).slice(s.courts.length).map((t,k)=>`<div class="mute" style="margin-top:6px">${cl(s.courtLabels,s.courts.length+k)}: trống</div>`).join('')}</div>`}).join('')}</div></div>
+    <div class="mute" style="margin:2px 0 6px">${(s.courtLabels||[]).map((t,i)=>cl(s.courtLabels,i)).join(' &nbsp;|&nbsp; ')} <span>· cần ${s.courts.length}/${s.courtsAvailable} sân</span></div>
+    ${s.players.length?`<ol class="plist">${s.players.map(n=>`<li><span>${esc(n)}</span></li>`).join('')}</ol>`:'<span class="mute">Trống</span>'}
+    </div>`}).join('')}</div></div>
    ${isAdmin()?`<div class="card"><h2>Theo từng người</h2><table><tr><th>Tên</th><th>Đăng ký</th><th>Được xếp</th></tr>
    ${Object.entries(sc.perMember).sort((a,b)=>a[1].length-b[1].length).map(([n,ds])=>`<tr><td>${esc(n)}</td><td>${(regs[n]?.days||[]).slice().sort().map(d=>DAYS[d]).join(', ')}</td>
    <td>${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;

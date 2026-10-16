@@ -1,5 +1,5 @@
 'use strict';
-// Chuyển dữ liệu đăng ký/lịch từ data.json (bản chạy local) lên Supabase.
+// Chuyển tài khoản + dữ liệu đăng ký/lịch từ data.json (bản chạy local) lên Supabase.
 // Chạy: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/import-data.js
 const fs = require('fs'), path = require('path');
 const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
@@ -12,6 +12,10 @@ const src = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data.json'), 
     await store.saveWeek(k, { courts: w.courts, schedule: w.schedule || null });
     for (const r of Object.values(w.registrations || {})) await store.putReg(k, { username: null, minSessions: 2, ...r });
     console.log('tuần', k, Object.keys(w.registrations || {}).length, 'đăng ký');
+  }
+  for (const u of Object.values(src.users || {})) {
+    await store.putUser({ status: 'active', ...u });
+    console.log('tài khoản', u.username, '(' + u.role + ')');
   }
   console.log('Xong.');
 })().catch(e => { console.error(e.message); process.exit(1); });
