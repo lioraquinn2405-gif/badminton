@@ -14,8 +14,7 @@ aside button:hover{background:var(--soft)}aside button.on{background:var(--pri);
 aside .badge{float:right;font-size:12px;background:var(--soft);color:var(--ink);border-radius:99px;padding:0 8px}
 aside button.on .badge{background:rgba(255,255,255,.25);color:#fff}
 main{flex:1;min-width:0;max-width:1000px;margin:0;padding:16px 20px}
-@media(max-width:760px){.app{display:block}aside{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:10px}
-aside h1{width:100%;margin:0}aside .grp{display:none}aside button{width:auto;margin:0}main{padding:12px}}
+
 h1{font-size:20px;margin:0 0 12px}h2{font-size:16px;margin:0 0 10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
 nav{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
@@ -33,7 +32,7 @@ input[type=number]{width:60px;border:1px solid var(--line);border-radius:8px;pad
 table{border-collapse:collapse;width:100%}td{overflow-wrap:anywhere}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;font-size:14px}
 th{color:var(--mute);font-weight:600}.num{text-align:right}
 .mute{color:var(--mute)}.warn{color:var(--warn)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:10px}
 .day{border:1px solid var(--line);border-radius:10px;padding:10px}
 .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:4px 0 8px}.bar i{display:block;height:100%;background:var(--pri)}
 .court{background:var(--soft);border-radius:8px;padding:6px 8px;margin-top:6px;font-size:14px}
@@ -41,7 +40,42 @@ th{color:var(--mute);font-weight:600}.num{text-align:right}
 .pill{display:inline-block;background:var(--soft);border-radius:99px;padding:1px 9px;margin:2px 2px 0 0;font-size:13px}
 .kpi{display:flex;gap:10px;flex-wrap:wrap}.kpi div{flex:1;min-width:130px;background:var(--soft);border-radius:10px;padding:10px}
 .kpi b{display:block;font-size:22px}
+
+.topbar{display:none}
+body.auth aside,body.auth .topbar{display:none!important}
+body.auth .app{display:block}
+.card{overflow-x:auto}
+table.stack td.act{white-space:normal}
+@media(max-width:760px){
+ html{-webkit-text-size-adjust:100%}
+ .app{display:block}
+ .topbar{display:flex;position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding:8px 14px;justify-content:space-between;align-items:center}
+ .topbar button{padding:8px 14px}
+ aside{display:none;position:fixed;top:53px;left:0;right:0;bottom:0;z-index:15;width:auto;height:auto;overflow:auto;border:0;padding:6px 12px 28px}
+ body.menu aside{display:block}
+ aside h1{display:none}aside .grp{display:block}
+ aside button{padding:13px 12px;font-size:16px}
+ main{padding:12px 12px 40px}
+ button,.days label{min-height:42px}
+ input[type=text],input[type=password],input[type=number],textarea{font-size:16px;padding:10px 12px}
+ .row input[type=text]{flex:1 1 150px;min-width:0;width:auto}
+ .row{gap:8px}
+ .days{display:grid;grid-template-columns:1fr 1fr}
+ .days label{padding:8px 10px}
+ .grid{grid-template-columns:1fr}
+ .kpi div{min-width:calc(50% - 10px)}
+ h1{font-size:18px}
+ .card{padding:12px}
+ table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
+ table.stack tr:has(th){display:none}
+ table.stack tr{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+ table.stack td{border:0;padding:2px 0;text-align:left!important;font-size:15px}
+ table.stack td[data-l]:before{content:attr(data-l) ": ";color:var(--mute)}
+ table.stack td.act{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+ .pop{position:fixed!important;left:12px!important;right:12px;top:auto!important;bottom:12px;width:auto;max-height:60vh}
+}
 </style></head><body><div class="app">
+<div class="topbar"><b>🏸 Phân lịch cầu lông</b><button id="menuBtn" onclick="document.body.classList.toggle('menu')" aria-label="Menu">☰ Menu</button></div>
 <aside><h1>🏸 Phân lịch cầu lông</h1><div id="nav"></div></aside>
 <main><div id="view"></div></main>
 </div>
@@ -68,7 +102,7 @@ async function boot(){
   const j=await (await fetch('/api/me')).json();ME=j.user;FIRST=j.firstUser;
   if(ME){tab='reg';await load()}else showAuth()}
 function showAuth(mode='login',msg=''){
-  $('aside').style.display='none';
+  document.body.classList.add('auth');document.body.classList.remove('menu');
   const su=mode==='signup';
   $('#view').innerHTML=`<div class="card" style="max-width:380px;margin:8vh auto">
    <h1>🏸 Phân lịch cầu lông</h1>
@@ -94,7 +128,7 @@ async function logout(){await api('POST','/api/logout',{});ME=null;S=null;FIRST=
 async function chPw(){const o=prompt('Mật khẩu hiện tại:');if(o===null)return;const n=prompt('Mật khẩu mới (tối thiểu 6 ký tự):');if(!n)return;await api('POST','/api/password',{old:o,password:n});alert('Đã đổi mật khẩu')}
 function shift(n){const d=new Date(wk+'T12:00');d.setDate(d.getDate()+7*n);wk=iso(d);load()}
 function render(){
-  $('aside').style.display='';
+  document.body.classList.remove('auth');
   const n=S?Object.keys(S.week.registrations).length:0;
   const items=isAdmin()
    ?[['Đăng ký',[['reg','Đăng ký mới'],['list','Danh sách đăng ký',n]]],['Lịch',[['sch','Lịch tuần']]],['Cấu hình',[['courts','Sân & khung giờ'],['users','Tài khoản',PENDING||undefined]]],['Báo cáo',[['st','Thống kê']]]]
@@ -110,7 +144,7 @@ function render(){
   $('#view').innerHTML=bar+({reg:regView,list:listView,courts:courtsView,sch:schView}[tab])();
   if(tab==='reg'&&isAdmin()&&viewDay!==null)showDay(viewDay);
 }
-function go(k){hideDay();tab=k;render()}
+function go(k){hideDay();tab=k;document.body.classList.remove('menu');scrollTo(0,0);render()}
 function regParts(){
   const w=S.week,regs=Object.values(w.registrations);
   const active=CT.map(c=>c.length>0);
@@ -133,9 +167,9 @@ function regParts(){
    <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
    ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
    list:`<div class="card"><h2>Đã đăng ký (${regs.length})</h2>
-   ${regs.length?`<table><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th><th></th></tr>`+
-   regs.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name)).map(r=>`<tr><td>${esc(r.name)}</td><td>${r.days.sort().map(d=>DAYS[d]).join(', ')}</td><td>${r.days.length} buổi${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
-   <td class="num"><button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button></td></tr>`).join('')+'</table>':'<span class="mute">Chưa có ai đăng ký.</span>'}
+   ${regs.length?`<table class="stack"><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th><th></th></tr>`+
+   regs.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name)).map(r=>`<tr><td><b>${esc(r.name)}</b></td><td data-l="Ngày">${r.days.sort().map(d=>DAYS[d]).join(', ')}</td><td data-l="Số buổi">${r.days.length} buổi${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
+   <td class="num act"><button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button></td></tr>`).join('')+'</table>':'<span class="mute">Chưa có ai đăng ký.</span>'}
    <p><button class="pri" onclick="assign()">⚙ Phân lịch tự động</button></p></div>`};
 }
 const regView=()=>regParts().reg,listView=()=>regParts().list,courtsView=()=>regParts().courts;
@@ -182,27 +216,27 @@ function schView(){
     <div class="mute" style="margin:2px 0 6px">${(s.courtLabels||[]).map((t,i)=>cl(s.courtLabels,i)).join(' &nbsp;|&nbsp; ')} <span>· cần ${s.courts.length}/${s.courtsAvailable} sân</span></div>
     ${s.players.length?`<ol class="plist">${s.players.map(n=>`<li><span>${esc(n)}</span></li>`).join('')}</ol>`:'<span class="mute">Trống</span>'}
     </div>`}).join('')}</div></div>
-   ${isAdmin()?`<div class="card"><h2>Theo từng người</h2><table><tr><th>Tên</th><th>Đăng ký</th><th>Được xếp</th></tr>
-   ${Object.entries(sc.perMember).sort((a,b)=>a[1].length-b[1].length).map(([n,ds])=>`<tr><td>${esc(n)}</td><td>${(regs[n]?.days||[]).slice().sort().map(d=>DAYS[d]).join(', ')}</td>
-   <td>${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;
+   ${isAdmin()?`<div class="card"><h2>Theo từng người</h2><table class="stack"><tr><th>Tên</th><th>Đăng ký</th><th>Được xếp</th></tr>
+   ${Object.entries(sc.perMember).sort((a,b)=>a[1].length-b[1].length).map(([n,ds])=>`<tr><td><b>${esc(n)}</b></td><td data-l="Đăng ký">${(regs[n]?.days||[]).slice().sort().map(d=>DAYS[d]).join(', ')}</td>
+   <td data-l="Được xếp">${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;
 }
 async function usersView(){
   const us=await api('GET','/api/users');PENDING=us.filter(u=>u.status==='pending').length;
   const pend=us.filter(u=>u.status==='pending'),act=us.filter(u=>u.status!=='pending');
   const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
-  $('#view').innerHTML=`<div class="card"><h2>Chờ duyệt (${pend.length})</h2>${pend.length?`<table><tr><th>Họ tên</th><th>Tên đăng nhập</th><th></th></tr>`+
-   pend.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td><td class="num"><button class="pri" onclick="uAct('approve',${q(u)})">Duyệt</button> <button onclick="uDel(${q(u)})">Từ chối</button></td></tr>`).join('')+'</table>':'<span class="mute">Không có tài khoản nào chờ duyệt.</span>'}</div>
+  $('#view').innerHTML=`<div class="card"><h2>Chờ duyệt (${pend.length})</h2>${pend.length?`<table class="stack"><tr><th>Họ tên</th><th>Tên đăng nhập</th><th></th></tr>`+
+   pend.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td data-l="Tên đăng nhập">${esc(u.username)}</td><td class="num act"><button class="pri" onclick="uAct('approve',${q(u)})">Duyệt</button> <button onclick="uDel(${q(u)})">Từ chối</button></td></tr>`).join('')+'</table>':'<span class="mute">Không có tài khoản nào chờ duyệt.</span>'}</div>
   <div class="card"><h2>Thêm tài khoản</h2>
    <div class="row"><input type="text" id="nu_name" placeholder="Họ tên" maxlength="60" size="24"><input type="text" id="nu_dept" placeholder="Bộ phận (tuỳ chọn)" size="14">
-    <input type="text" id="nu_user" placeholder="Tên đăng nhập" size="14" autocapitalize="none"><input type="text" id="nu_pw" placeholder="Mật khẩu (trống = giống tên đăng nhập)" size="30">
+    <input type="text" id="nu_user" placeholder="Tên đăng nhập" size="14" autocapitalize="none"><input type="text" id="nu_pw" placeholder="Mật khẩu (trống = tên ĐN)" size="22">
     <label class="row"><input type="checkbox" id="nu_admin"> Quản trị viên</label><button class="pri" onclick="uAdd()">Thêm</button></div>
    <details style="margin-top:12px"><summary style="cursor:pointer"><b>Thêm hàng loạt</b> (dán từ Excel)</summary>
     <p class="mute">Mỗi dòng: <b>Mã nhân viên</b> ⇥ <b>Họ tên</b> ⇥ <b>Bộ phận</b> (copy thẳng từ Excel). Tên đăng nhập và mật khẩu đều là mã nhân viên, tên hiển thị dạng "Họ tên (Bộ phận)". Dòng tiêu đề tự bỏ qua.</p>
     <textarea id="nu_bulk" rows="8" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:inherit" placeholder="014550&#9;Lê Hoàng Minh Anh&#9;RD"></textarea>
     <p><button class="pri" onclick="uBulk()">Tạo các tài khoản</button></p></details></div>
-  <div class="card"><h2>Tài khoản (${act.length})</h2><table><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
-   ${act.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td><td>${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
-   <td class="num">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`;
+  <div class="card"><h2>Tài khoản (${act.length})</h2><table class="stack"><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
+   ${act.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td data-l="Tên đăng nhập">${esc(u.username)}</td><td data-l="Quyền">${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
+   <td class="num act">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`;
   const nb=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.startsWith('Tài khoản'));
   if(nb)nb.innerHTML='Tài khoản'+(PENDING?`<span class="badge">${PENDING}</span>`:'');
 }
