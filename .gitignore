@@ -5,3 +5,4 @@ data.json.tmp
 .env.*
 .vercel
 server.log
+supabase/seed_users.sql

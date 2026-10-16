@@ -192,12 +192,37 @@ async function usersView(){
   const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
   $('#view').innerHTML=`<div class="card"><h2>Chờ duyệt (${pend.length})</h2>${pend.length?`<table><tr><th>Họ tên</th><th>Tên đăng nhập</th><th></th></tr>`+
    pend.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td><td class="num"><button class="pri" onclick="uAct('approve',${q(u)})">Duyệt</button> <button onclick="uDel(${q(u)})">Từ chối</button></td></tr>`).join('')+'</table>':'<span class="mute">Không có tài khoản nào chờ duyệt.</span>'}</div>
+  <div class="card"><h2>Thêm tài khoản</h2>
+   <div class="row"><input type="text" id="nu_name" placeholder="Họ tên" maxlength="60" size="24"><input type="text" id="nu_dept" placeholder="Bộ phận (tuỳ chọn)" size="14">
+    <input type="text" id="nu_user" placeholder="Tên đăng nhập" size="14" autocapitalize="none"><input type="text" id="nu_pw" placeholder="Mật khẩu (trống = giống tên đăng nhập)" size="30">
+    <label class="row"><input type="checkbox" id="nu_admin"> Quản trị viên</label><button class="pri" onclick="uAdd()">Thêm</button></div>
+   <details style="margin-top:12px"><summary style="cursor:pointer"><b>Thêm hàng loạt</b> (dán từ Excel)</summary>
+    <p class="mute">Mỗi dòng: <b>Mã nhân viên</b> ⇥ <b>Họ tên</b> ⇥ <b>Bộ phận</b> (copy thẳng từ Excel). Tên đăng nhập và mật khẩu đều là mã nhân viên, tên hiển thị dạng "Họ tên (Bộ phận)". Dòng tiêu đề tự bỏ qua.</p>
+    <textarea id="nu_bulk" rows="8" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:inherit" placeholder="014550&#9;Lê Hoàng Minh Anh&#9;RD"></textarea>
+    <p><button class="pri" onclick="uBulk()">Tạo các tài khoản</button></p></details></div>
   <div class="card"><h2>Tài khoản (${act.length})</h2><table><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
    ${act.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td><td>${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
    <td class="num">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`;
   const nb=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.startsWith('Tài khoản'));
   if(nb)nb.innerHTML='Tài khoản'+(PENDING?`<span class="badge">${PENDING}</span>`:'');
 }
+function uReport(r){
+  let m='Đã tạo '+r.created.length+' tài khoản.';
+  if(r.errors.length)m+='\n\nKhông tạo được '+r.errors.length+':\n'+r.errors.map(e=>'• '+e.username+(e.name?' ('+e.name+')':'')+': '+e.error).join('\n');
+  alert(m)}
+async function uAdd(){
+  const name=$('#nu_name').value.trim(),dept=$('#nu_dept').value.trim();
+  const r=await api('POST','/api/users',{name:dept?name+' ('+dept+')':name,username:$('#nu_user').value,password:$('#nu_pw').value,role:$('#nu_admin').checked?'admin':'member'});
+  uReport(r);usersView()}
+async function uBulk(){
+  const users=[];
+  for(const line of $('#nu_bulk').value.split('\n')){
+    const c=line.split('\t').map(x=>x.trim());if(c.length<2||!c[0])continue;
+    if(!/^[A-Za-z0-9_.-]{3,30}$/.test(c[0]))continue; // bỏ dòng tiêu đề
+    users.push({username:c[0],name:c[2]?c[1]+' ('+c[2]+')':c[1]})}
+  if(!users.length){alert('Không có dòng hợp lệ. Hãy dán từ Excel (các cột cách nhau bằng Tab).');return}
+  if(!confirm('Tạo '+users.length+' tài khoản (mật khẩu = mã nhân viên)?'))return;
+  uReport(await api('POST','/api/users',{users}));usersView()}
 async function uAct(a,u){await api('PUT','/api/users/'+a,{username:u});usersView()}
 async function uRole(u,r){await api('PUT','/api/users/role',{username:u,role:r});usersView()}
 async function uPw(u){const p=prompt('Mật khẩu mới cho '+u+' (tối thiểu 6 ký tự):');if(p){await api('PUT','/api/users/password',{username:u,password:p});alert('Đã đặt lại mật khẩu')}}
