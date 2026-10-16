@@ -96,7 +96,7 @@ async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type
 const isAdmin=()=>ME&&ME.role==='admin';
 async function load(){
   S=await api('GET','/api/state?week='+wk);CT=JSON.parse(JSON.stringify(S.week.courts));
-  if(isAdmin()){try{PENDING=(await api('GET','/api/users')).filter(u=>u.status==='pending').length}catch(e){}}
+  PENDING=S.pending||0;
   render()}
 async function boot(){
   const j=await (await fetch('/api/me')).json();ME=j.user;FIRST=j.firstUser;
