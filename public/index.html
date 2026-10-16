@@ -74,7 +74,7 @@ function showAuth(mode='login',msg=''){
    <h1>🏸 Phân lịch cầu lông</h1>
    <div class="row" style="margin-bottom:12px"><button class="${su?'':'pri'}" onclick="showAuth('login')">Đăng nhập</button><button class="${su?'pri':''}" onclick="showAuth('signup')">Tạo tài khoản</button></div>
    ${msg?`<p style="background:var(--soft);padding:8px 10px;border-radius:8px">${esc(msg)}</p>`:''}
-   <form onsubmit="return authSubmit('${mode}')">
+   <form onsubmit="authSubmit('${mode}');return false">
    ${su?`<p><input type="text" id="an" placeholder="Họ tên hiển thị (sẽ hiện trên lịch)" maxlength="60" style="width:100%"></p>`:''}
    <p><input type="text" id="au" placeholder="Tên đăng nhập (chữ thường không dấu)" autocomplete="username" style="width:100%" autocapitalize="none"></p>
    <p><input type="password" id="ap" placeholder="Mật khẩu (tối thiểu 6 ký tự)" autocomplete="${su?'new-password':'current-password'}" style="width:100%"></p>
