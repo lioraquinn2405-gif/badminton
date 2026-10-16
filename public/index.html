@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phân lịch cầu lông</title>
+<style>
+:root{--bg:#f5f7f4;--card:#fff;--ink:#1d2a22;--mute:#6b7a70;--line:#dfe6e0;--pri:#1f8a4c;--warn:#c0392b;--soft:#e8f5ec}
+@media(prefers-color-scheme:dark){:root{--bg:#141a16;--card:#1d2620;--ink:#e6efe8;--mute:#93a398;--line:#2f3b33;--soft:#22372a}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+.app{display:flex;min-height:100vh}
+aside{width:220px;flex:none;background:var(--card);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+aside h1{padding:0 8px}
+aside .grp{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);margin:16px 8px 4px}
+aside button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:8px;margin-bottom:2px}
+aside button:hover{background:var(--soft)}aside button.on{background:var(--pri);color:#fff}
+aside .badge{float:right;font-size:12px;background:var(--soft);color:var(--ink);border-radius:99px;padding:0 8px}
+aside button.on .badge{background:rgba(255,255,255,.25);color:#fff}
+main{flex:1;min-width:0;max-width:1000px;margin:0;padding:16px 20px}
+@media(max-width:760px){.app{display:block}aside{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:10px}
+aside h1{width:100%;margin:0}aside .grp{display:none}aside button{width:auto;margin:0}main{padding:12px}}
+h1{font-size:20px;margin:0 0 12px}h2{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+nav{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+button,input,select{font:inherit;color:inherit}
+button{border:1px solid var(--line);background:var(--card);padding:6px 12px;border-radius:8px;cursor:pointer}
+button.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
+input[type=number]{width:60px;border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--bg)}
+.days{position:relative;display:flex;gap:6px;flex-wrap:wrap}
+.days label{border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;user-select:none}
+.days label.on{background:var(--soft);border-color:var(--pri)}.days input{display:none}
+.pop{position:absolute;z-index:5;width:min(340px,100%);max-height:50vh;overflow:auto;background:var(--card);border:1px solid var(--pri);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.days label.off{opacity:.4;pointer-events:none}
+table{border-collapse:collapse;width:100%}td{overflow-wrap:anywhere}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;font-size:14px}
+th{color:var(--mute);font-weight:600}.num{text-align:right}
+.mute{color:var(--mute)}.warn{color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.day{border:1px solid var(--line);border-radius:10px;padding:10px}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:4px 0 8px}.bar i{display:block;height:100%;background:var(--pri)}
+.court{background:var(--soft);border-radius:8px;padding:6px 8px;margin-top:6px;font-size:14px}
+.plist{list-style:none;counter-reset:n;margin:6px 0 0;padding:0}.plist li{counter-increment:n;display:flex;gap:8px;padding:3px 0;border-top:1px solid var(--line);overflow-wrap:anywhere;line-height:1.35}.plist li:first-child{border-top:0}.plist li:before{content:counter(n);flex:none;min-width:20px;color:var(--mute);text-align:right;font-size:13px}
+.pill{display:inline-block;background:var(--soft);border-radius:99px;padding:1px 9px;margin:2px 2px 0 0;font-size:13px}
+.kpi{display:flex;gap:10px;flex-wrap:wrap}.kpi div{flex:1;min-width:130px;background:var(--soft);border-radius:10px;padding:10px}
+.kpi b{display:block;font-size:22px}
+</style></head><body><div class="app">
+<aside><h1>🏸 Phân lịch cầu lông</h1><div id="nav"></div></aside>
+<main><div id="view"></div></main>
+</div>
+<script>
+const DAYS=['T2','T3','T4','T5','T6','T7','CN'];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cl=(L,i)=>{const t=L&&L[i];const o=typeof t==='object'&&t?t:{name:'',time:t||''};return esc(o.name||'Sân '+(i+1))+(o.time?' · '+esc(o.time):'')};
+const pct=x=>(x*100).toFixed(0)+'%';
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function monday(d){const x=new Date(d);x.setHours(12);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+let ME=null,FIRST=false,PENDING=0,viewDay=null,tab='reg',wk=iso(monday(new Date())),S=null,CT=[];
+const fmt=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return `${d.getDate()}/${d.getMonth()+1}`};
+async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  const j=await r.json();
+  if(r.status===401&&p!=='/api/login'){ME=null;showAuth();throw 0}
+  if(!r.ok){alert(j.error||'Lỗi');throw 0}return j}
+const isAdmin=()=>ME&&ME.role==='admin';
+async function load(){
+  S=await api('GET','/api/state?week='+wk);CT=JSON.parse(JSON.stringify(S.week.courts));
+  if(isAdmin()){try{PENDING=(await api('GET','/api/users')).filter(u=>u.status==='pending').length}catch(e){}}
+  render()}
+async function boot(){
+  const j=await (await fetch('/api/me')).json();ME=j.user;FIRST=j.firstUser;
+  if(ME){tab='reg';await load()}else showAuth()}
+function showAuth(mode='login',msg=''){
+  $('aside').style.display='none';
+  const su=mode==='signup';
+  $('#view').innerHTML=`<div class="card" style="max-width:380px;margin:8vh auto">
+   <h1>🏸 Phân lịch cầu lông</h1>
+   <div class="row" style="margin-bottom:12px"><button class="${su?'':'pri'}" onclick="showAuth('login')">Đăng nhập</button><button class="${su?'pri':''}" onclick="showAuth('signup')">Tạo tài khoản</button></div>
+   ${msg?`<p style="background:var(--soft);padding:8px 10px;border-radius:8px">${esc(msg)}</p>`:''}
+   <form onsubmit="return authSubmit('${mode}')">
+   ${su?`<p><input type="text" id="an" placeholder="Họ tên hiển thị (sẽ hiện trên lịch)" maxlength="60" style="width:100%"></p>`:''}
+   <p><input type="text" id="au" placeholder="Tên đăng nhập (chữ thường không dấu)" autocomplete="username" style="width:100%" autocapitalize="none"></p>
+   <p><input type="password" id="ap" placeholder="Mật khẩu (tối thiểu 6 ký tự)" autocomplete="${su?'new-password':'current-password'}" style="width:100%"></p>
+   <button class="pri" type="submit" style="width:100%">${su?'Tạo tài khoản':'Đăng nhập'}</button></form>
+   ${su?`<p class="mute">${FIRST?'Tài khoản đầu tiên sẽ là quản trị viên.':'Tài khoản cần được quản trị viên duyệt trước khi đăng nhập được.'}</p>`:''}</div>`;
+}
+async function authSubmit(mode){
+  const body={username:$('#au').value,password:$('#ap').value};
+  if(mode==='signup')body.name=$('#an').value;
+  try{
+    const j=await api('POST','/api/'+(mode==='signup'?'signup':'login'),body);
+    if(j.pending){showAuth('login','Đã tạo tài khoản. Vui lòng chờ quản trị viên duyệt, sau đó bạn có thể đăng nhập.');return false}
+    ME=j.user;tab='reg';await load();
+  }catch(e){}
+  return false}
+async function logout(){await api('POST','/api/logout',{});ME=null;S=null;FIRST=false;showAuth()}
+async function chPw(){const o=prompt('Mật khẩu hiện tại:');if(o===null)return;const n=prompt('Mật khẩu mới (tối thiểu 6 ký tự):');if(!n)return;await api('POST','/api/password',{old:o,password:n});alert('Đã đổi mật khẩu')}
+function shift(n){const d=new Date(wk+'T12:00');d.setDate(d.getDate()+7*n);wk=iso(d);load()}
+function render(){
+  $('aside').style.display='';
+  const n=S?Object.keys(S.week.registrations).length:0;
+  const items=isAdmin()
+   ?[['Đăng ký',[['reg','Đăng ký mới'],['list','Danh sách đăng ký',n]]],['Lịch',[['sch','Lịch tuần']]],['Cấu hình',[['courts','Sân & khung giờ'],['users','Tài khoản',PENDING||undefined]]],['Báo cáo',[['st','Thống kê']]]]
+   :[['Lịch',[['reg','Đăng ký lịch'],['sch','Lịch tuần']]]];
+  $('#nav').innerHTML=items.map(([g,bs])=>`<div class="grp">${g}</div>`+bs.map(([k,l,c])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}${c!==undefined?`<span class="badge">${c}</span>`:''}</button>`).join('')).join('')
+   +`<div class="grp">Tài khoản</div><div style="padding:0 10px 6px"><b>${esc(ME.name)}</b><br><span class="mute">${isAdmin()?'Quản trị viên':'Thành viên'} · ${esc(ME.username)}</span></div>
+   <button onclick="chPw()">Đổi mật khẩu</button><button onclick="logout()">Đăng xuất</button>`;
+  if(tab==='st'&&isAdmin())return stats();
+  if(tab==='users'&&isAdmin())return usersView();
+  const bar=`<div class="card row"><button onclick="shift(-1)">‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
+   <button onclick="wk='${iso(monday(new Date()))}';load()">Tuần này</button></div>`;
+  if(!isAdmin()&&!['reg','sch'].includes(tab))tab='reg';
+  $('#view').innerHTML=bar+({reg:regView,list:listView,courts:courtsView,sch:schView}[tab])();
+  if(tab==='reg'&&isAdmin()&&viewDay!==null)showDay(viewDay);
+}
+function go(k){hideDay();tab=k;render()}
+function regParts(){
+  const w=S.week,regs=Object.values(w.registrations);
+  const active=CT.map(c=>c.length>0);
+  const cnt=S.counts, adm=isAdmin(), mine=adm?null:w.registrations[ME.name];
+  return {courts:`<div class="card"><h2>Sân & khung giờ từng ngày <span class="mute">(ưu tiên ${S.settings.perCourt} người/sân, quá khó xếp mới nới tới ${S.settings.maxPerCourt})</span></h2>
+   <div class="grid">${DAYS.map((d,i)=>`<div class="day"><b>${d} ${fmt(wk,i)}</b> <span class="mute">· ${cnt[i]} người đăng ký</span>
+    ${CT[i].map((t,j)=>`<div class="row" style="margin-top:6px"><span class="row" style="gap:4px"><b>Sân</b><input type="text" inputmode="numeric" value="${esc((t.name||'').replace(/^Sân\s*/i,''))}" placeholder="${j+1}" size="3" style="width:56px;text-align:center" oninput="CT[${i}][${j}].name=this.value.trim()?'Sân '+this.value.trim():''"></span>
+      <input type="text" value="${esc(t.time)}" placeholder="17:00-19:00" size="11" oninput="CT[${i}][${j}].time=this.value">
+      <button onclick="CT[${i}].splice(${j},1);render()">✕</button></div>`).join('')||'<div class="mute">Không có sân</div>'}
+    <button style="margin-top:8px" onclick="CT[${i}].push({name:'',time:'17:00-19:00'});render()">+ Thêm sân</button></div>`).join('')}</div>
+   <div class="row" style="margin-top:10px"><button class="pri" onclick="saveCourts(false)">Lưu tuần này</button>
+   <button onclick="saveCourts(true)">Lưu & dùng làm mặc định cho các tuần sau</button></div>
+   ${w.schedule?'<p class="mute">Sau khi đổi sân, bấm "Phân lịch tự động" lại để cập nhật lịch.</p>':''}</div>`,
+   reg:`<div class="card"><h2>Đăng ký / cập nhật</h2>
+   ${adm?`<div class="row" style="margin-bottom:10px"><input type="text" id="nm" placeholder="Họ và tên thành viên" maxlength="60" size="32" list="names">
+    <datalist id="names">${regs.map(r=>`<option value="${esc(r.name)}">`).join('')}</datalist>
+    <label class="row"><input type="checkbox" id="one"> Trường hợp đặc biệt: chỉ 1 buổi</label></div>`
+   :`<p>Đăng ký cho: <b>${esc(ME.name)}</b>${mine?` <span class="mute">· đã đăng ký ${mine.days.length} ngày</span>`:''}</p>`}
+   <div class="days" id="dsel">${DAYS.map((d,i)=>`<label class="${active[i]?'':'off'}${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);${adm?`showDay(${i})`:''}">${d} ${fmt(wk,i)}<br><small class="mute">${cnt[i]} người đăng ký${active[i]?' / '+CT[i].length*S.settings.perCourt+' chỗ':''}</small></label>`).join('')}<div id="dlist"></div></div>
+   <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
+   ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
+   list:`<div class="card"><h2>Đã đăng ký (${regs.length})</h2>
+   ${regs.length?`<table><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th><th></th></tr>`+
+   regs.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name)).map(r=>`<tr><td>${esc(r.name)}</td><td>${r.days.sort().map(d=>DAYS[d]).join(', ')}</td><td>${r.days.length} buổi${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
+   <td class="num"><button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button></td></tr>`).join('')+'</table>':'<span class="mute">Chưa có ai đăng ký.</span>'}
+   <p><button class="pri" onclick="assign()">⚙ Phân lịch tự động</button></p></div>`};
+}
+const regView=()=>regParts().reg,listView=()=>regParts().list,courtsView=()=>regParts().courts;
+function showDay(i){
+  viewDay=i;
+  const box=$('#dlist'),sel=$('#dsel'),chip=sel.querySelectorAll('label')[i];
+  const rs=Object.values(S.week.registrations).filter(r=>r.days.includes(i)).sort((a,b)=>a.at.localeCompare(b.at));
+  box.className='pop';
+  box.innerHTML=`<b>${DAYS[i]} ${fmt(wk,i)}</b> <span class="mute">· ${rs.length} người đăng ký</span>
+   ${rs.length?`<ol class="plist">${rs.map(r=>`<li><span>${esc(r.name)}${r.minSessions===1?' <span class="mute">(chỉ 1 buổi)</span>':''}
+   <span class="mute"> · ${r.days.length} buổi/tuần</span></span></li>`).join('')}</ol>`:'<div class="mute">Chưa có ai đăng ký.</div>'}`;
+  box.style.top=(chip.offsetTop+chip.offsetHeight+6)+'px';
+  box.style.left=Math.max(0,Math.min(chip.offsetLeft,sel.clientWidth-box.offsetWidth))+'px';
+}
+function hideDay(){viewDay=null;const b=$('#dlist');if(b){b.className='';b.innerHTML=''}}
+document.addEventListener('click',e=>{
+  if(viewDay===null||e.target.closest('#dlist')||e.target.closest('#dsel label'))return;
+  hideDay();
+});
+async function saveCourts(def){await api('PUT','/api/courts',{week:wk,courts:CT,setDefault:def});await load()}
+async function reg(){
+  const days=[...document.querySelectorAll('#dsel input:checked')].map(i=>+i.value);
+  await api('PUT','/api/register',{week:wk,name:$('#nm')?$('#nm').value:undefined,days,minSessions:$('#one')&&$('#one').checked?1:2});
+  alert('Đã lưu đăng ký');load()}
+function edit(n){tab='reg';render();const r=S.week.registrations[n];$('#nm').value=n;$('#one').checked=r.minSessions===1;
+  document.querySelectorAll('#dsel input').forEach(i=>{i.checked=r.days.includes(+i.value);i.parentNode.classList.toggle('on',i.checked)});scrollTo(0,0)}
+async function del(n){if(typeof n==='string'&&n[0]==='"')n=JSON.parse(n);if(confirm('Xóa đăng ký của '+n+'?')){await api('DELETE','/api/register',{week:wk,name:n});load()}}
+async function assign(){const r=await api('POST','/api/assign',{week:wk});tab='sch';await load()}
+function schView(){
+  const sc=S.week.schedule;
+  if(!sc)return `<div class="card">Tuần này chưa có lịch phân sân.${isAdmin()?` <button class="pri" onclick="assign()">⚙ Phân lịch tự động</button>`:' Vui lòng quay lại sau khi quản trị viên chốt lịch.'}</div>`;
+  const days=Object.keys(sc.sessions).sort();
+  let used=0,cap=0,emp=0,ca=0,co=0;days.forEach(d=>{const s=sc.sessions[d];used+=s.players.length;cap+=s.capacity;emp+=Math.max(0,s.capacity-s.players.length);ca+=s.courtsAvailable;co+=s.courts.filter(c=>c.length).length});
+  const regs=S.week.registrations;
+  const under=Object.entries(sc.perMember).filter(([n,ds])=>ds.length<(regs[n]?.minSessions||2));
+  const mineList=Object.keys(sc.sessions).sort().map(d=>{const s=sc.sessions[d],i=s.courts.findIndex(c=>c.includes(ME.name));return i<0?null:`<li><b>${DAYS[d]} ${fmt(wk,+d)}</b> · ${cl(s.courtLabels,i)}</li>`}).filter(Boolean);
+  const mineCard=`<div class="card" style="border-color:var(--pri)"><h2>Lịch của bạn (${esc(ME.name)})</h2>${mineList.length?`<ul style="margin:0;padding-left:18px">${mineList.join('')}</ul>`:'<span class="mute">Bạn chưa được xếp buổi nào trong tuần này.</span>'}</div>`;
+  return mineCard+`<div class="card kpi"><div><b>${used}/${cap}</b>chỗ đã dùng</div><div><b>${pct(cap?emp/cap:0)}</b>chỗ trống</div>
+   <div><b>${co}/${ca}</b>sân có người</div><div><b>${pct(ca?1-co/ca:0)}</b>sân trống</div></div>
+   ${isAdmin()&&sc.warnings.length?`<div class="card warn"><b>Cảnh báo</b><ul>${sc.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}
+   <div class="card"><div class="row" style="justify-content:space-between"><h2>Lịch chơi</h2>${isAdmin()?'<button onclick="assign()">Phân lại</button>':''}</div>
+   <div class="grid">${days.map(d=>{const s=sc.sessions[d];return `<div class="day"><b>${DAYS[d]} ${fmt(wk,+d)}</b> <span class="${s.overflow?'warn':'mute'}">${s.players.length}/${s.capacity} người</span>${s.overflow?` <span class="warn">· nới tối đa ${S.settings.maxPerCourt}/sân</span>`:''}
+    <div class="bar"><i style="width:${Math.min(100,s.players.length/s.capacity*100)}%"></i></div>
+    ${s.courts.map((c,i)=>`<div class="court"><b>${cl(s.courtLabels,i)}</b> <span class="${c.length>S.settings.perCourt?'warn':'mute'}">(${c.length} người)</span><ol class="plist">${c.map(n=>`<li><span>${esc(n)}</span></li>`).join('')}</ol></div>`).join('')||'<span class="mute">Trống</span>'}
+    ${(s.courtLabels||[]).slice(s.courts.length).map((t,k)=>`<div class="mute" style="margin-top:6px">${cl(s.courtLabels,s.courts.length+k)}: trống</div>`).join('')}</div>`}).join('')}</div></div>
+   ${isAdmin()?`<div class="card"><h2>Theo từng người</h2><table><tr><th>Tên</th><th>Đăng ký</th><th>Được xếp</th></tr>
+   ${Object.entries(sc.perMember).sort((a,b)=>a[1].length-b[1].length).map(([n,ds])=>`<tr><td>${esc(n)}</td><td>${(regs[n]?.days||[]).slice().sort().map(d=>DAYS[d]).join(', ')}</td>
+   <td>${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;
+}
+async function usersView(){
+  const us=await api('GET','/api/users');PENDING=us.filter(u=>u.status==='pending').length;
+  const pend=us.filter(u=>u.status==='pending'),act=us.filter(u=>u.status!=='pending');
+  const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
+  $('#view').innerHTML=`<div class="card"><h2>Chờ duyệt (${pend.length})</h2>${pend.length?`<table><tr><th>Họ tên</th><th>Tên đăng nhập</th><th></th></tr>`+
+   pend.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td><td class="num"><button class="pri" onclick="uAct('approve',${q(u)})">Duyệt</button> <button onclick="uDel(${q(u)})">Từ chối</button></td></tr>`).join('')+'</table>':'<span class="mute">Không có tài khoản nào chờ duyệt.</span>'}</div>
+  <div class="card"><h2>Tài khoản (${act.length})</h2><table><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
+   ${act.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td><td>${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
+   <td class="num">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`;
+  const nb=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.startsWith('Tài khoản'));
+  if(nb)nb.innerHTML='Tài khoản'+(PENDING?`<span class="badge">${PENDING}</span>`:'');
+}
+async function uAct(a,u){await api('PUT','/api/users/'+a,{username:u});usersView()}
+async function uRole(u,r){await api('PUT','/api/users/role',{username:u,role:r});usersView()}
+async function uPw(u){const p=prompt('Mật khẩu mới cho '+u+' (tối thiểu 6 ký tự):');if(p){await api('PUT','/api/users/password',{username:u,password:p});alert('Đã đặt lại mật khẩu')}}
+async function uDel(u){if(confirm('Xóa tài khoản '+u+'?')){await api('DELETE','/api/users',{username:u});usersView()}}
+async function stats(){
+  const s=await api('GET','/api/stats');
+  $('#view').innerHTML=`<div class="card kpi"><div><b>${s.overall.weeks}</b>tuần đã phân lịch</div><div><b>${pct(s.overall.emptySeatRate)}</b>chỗ trống TB</div><div><b>${pct(s.overall.emptyCourtRate)}</b>sân trống TB</div></div>
+  <div class="card"><h2>Tần suất tham gia</h2>${s.members.length?`<table><tr><th>Tên</th><th class="num">Số tuần</th><th class="num">Tổng buổi</th><th class="num">Buổi/tuần</th><th class="num">Xếp/đăng ký</th><th class="num">Tuần đủ tối thiểu</th></tr>
+  ${s.members.map(m=>`<tr><td>${esc(m.name)}</td><td class="num">${m.weeks}</td><td class="num">${m.sessions}</td><td class="num">${m.avgPerWeek.toFixed(1)}</td><td class="num">${pct(m.attendRate)}</td><td class="num">${m.metMin}/${m.weeks}</td></tr>`).join('')}</table>`:'<span class="mute">Chưa có dữ liệu — hãy phân lịch ít nhất một tuần.</span>'}</div>
+  <div class="card"><h2>Mức lấp đầy theo thứ</h2><table><tr><th>Thứ</th><th class="num">Số tuần</th><th class="num">Lấp đầy</th><th class="num">Trống</th></tr>
+  ${s.days.map((d,i)=>d.weeks?`<tr><td>${DAYS[i]}</td><td class="num">${d.weeks}</td><td class="num">${pct(d.fill)}</td><td class="num">${pct(1-d.fill)}</td></tr>`:'').join('')}</table></div>
+  <div class="card"><h2>Theo tuần</h2><table><tr><th>Tuần</th><th class="num">Chỗ dùng</th><th class="num">Chỗ trống</th><th class="num">Sân trống</th></tr>
+  ${s.weeks.slice().reverse().map(w=>`<tr><td>${fmt(w.week)}</td><td class="num">${w.used}/${w.cap}</td><td class="num">${pct(w.emptySeatRate)}</td><td class="num">${pct(w.emptyCourtRate)} (${w.courtsAvail-w.courtsOpen}/${w.courtsAvail})</td></tr>`).join('')}</table></div>`;
+}
+boot();
+</script></body></html>

@@ -1,0 +1,8 @@
+{
+  "name": "badminton-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": { "start": "node server.js", "import": "node scripts/import-data.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "@supabase/supabase-js": "^2.45.0" }
+}
