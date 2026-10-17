@@ -253,6 +253,16 @@ function schView(){
    ${Object.entries(sc.perMember).sort((a,b)=>a[1].length-b[1].length).map(([n,ds])=>`<tr><td><b>${esc(n)}</b></td><td data-l="Đăng ký">${(regs[n]?.days||[]).slice().sort().map(d=>DAYS[d]).join(', ')}</td>
    <td data-l="Được xếp">${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;
 }
+function usersList(act){
+  const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
+  return `<div class="card"><h2>Tài khoản (${act.length})</h2><table class="stack"><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
+   ${act.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td data-l="Tên đăng nhập">${esc(u.username)}</td><td data-l="Quyền">${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
+   <td class="num act">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`}
+async function refreshUsers(){
+  if(tab!=='users'||!isAdmin()||document.hidden||!$('#ulist'))return;
+  try{const act=await api('GET','/api/users');if(tab==='users'&&$('#ulist'))$('#ulist').innerHTML=usersList(act)}catch(e){}}
+setInterval(refreshUsers,15000);
+document.addEventListener('visibilitychange',refreshUsers);
 async function usersView(){
   const act=await api('GET','/api/users');
   const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
@@ -264,9 +274,7 @@ async function usersView(){
     <p class="mute">Mỗi dòng: <b>Mã nhân viên</b> ⇥ <b>Họ tên</b> ⇥ <b>Bộ phận</b> (copy thẳng từ Excel). Tên đăng nhập và mật khẩu đều là mã nhân viên, tên hiển thị dạng "Họ tên (Bộ phận)". Dòng tiêu đề tự bỏ qua.</p>
     <textarea id="nu_bulk" rows="8" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:inherit" placeholder="014550&#9;Lê Hoàng Minh Anh&#9;RD"></textarea>
     <p><button class="pri" onclick="uBulk()">Tạo các tài khoản</button></p></details></div>
-  <div class="card"><h2>Tài khoản (${act.length})</h2><table class="stack"><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
-   ${act.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td data-l="Tên đăng nhập">${esc(u.username)}</td><td data-l="Quyền">${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
-   <td class="num act">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`;
+  <div id="ulist">${usersList(act)}</div>`;
 }
 function uReport(r){
   let m='Đã tạo '+r.created.length+' tài khoản.';
