@@ -257,7 +257,7 @@ function usersList(act){
   const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
   return `<div class="card"><h2>Tài khoản (${act.length})</h2><table class="stack"><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
    ${act.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td data-l="Tên đăng nhập">${esc(u.username)}</td><td data-l="Quyền">${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
-   <td class="num act">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`}
+   <td class="num act">${u.username===ME.username?'<span class="mute">(bạn)</span> ':''}<button onclick="uName(${q(u)},${JSON.stringify(u.name).replace(/"/g,'&quot;')})">Sửa tên</button> ${u.username===ME.username?'':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`}
 async function refreshUsers(){
   if(tab!=='users'||!isAdmin()||document.hidden||!$('#ulist'))return;
   try{const act=await api('GET','/api/users');if(tab==='users'&&$('#ulist'))$('#ulist').innerHTML=usersList(act)}catch(e){}}
@@ -293,6 +293,13 @@ async function uBulk(){
   if(!users.length){alert('Không có dòng hợp lệ. Hãy dán từ Excel (các cột cách nhau bằng Tab).');return}
   if(!confirm('Tạo '+users.length+' tài khoản (mật khẩu = mã nhân viên)?'))return;
   uReport(await api('POST','/api/users',{users}));usersView()}
+async function uName(u,cur){
+  const n=prompt('Họ tên hiển thị mới cho "'+u+'".\nHọ tên này hiện trên lịch phân sân; các đăng ký và lịch đã phân của người này sẽ tự cập nhật theo tên mới.',cur);
+  if(n===null||!n.trim()||n.trim()===cur)return;
+  const r=await api('PUT','/api/users/name',{username:u,name:n});
+  if(u===ME.username){ME.name=r.name;render()}
+  alert('Đã đổi họ tên thành: '+r.name+(r.weeksUpdated?'\nĐã cập nhật '+r.weeksUpdated+' tuần có lịch phân.':''));
+  usersView()}
 async function uAct(a,u){await api('PUT','/api/users/'+a,{username:u});usersView()}
 async function uRole(u,r){await api('PUT','/api/users/role',{username:u,role:r});usersView()}
 async function uPw(u){
