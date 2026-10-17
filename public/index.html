@@ -87,7 +87,7 @@ const cl=(L,i)=>{const t=L&&L[i];const o=typeof t==='object'&&t?t:{name:'',time:
 const pct=x=>(x*100).toFixed(0)+'%';
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 function monday(d){const x=new Date(d);x.setHours(12);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
-let ME=null,FIRST=false,PENDING=0,viewDay=null,tab='reg',wk=iso(monday(new Date())),S=null,CT=[];
+let ME=null,FIRST=false,viewDay=null,tab='reg',wk=iso(monday(new Date())),S=null,CT=[];
 const fmt=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return `${d.getDate()}/${d.getMonth()+1}`};
 async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
   const j=await r.json();
@@ -96,31 +96,29 @@ async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type
 const isAdmin=()=>ME&&ME.role==='admin';
 async function load(){
   S=await api('GET','/api/state?week='+wk);CT=JSON.parse(JSON.stringify(S.week.courts));
-  PENDING=S.pending||0;
   render()}
 async function boot(){
   const j=await (await fetch('/api/me')).json();ME=j.user;FIRST=j.firstUser;
   if(ME){tab='reg';await load()}else showAuth()}
-function showAuth(mode='login',msg=''){
+function showAuth(mode,msg=''){
   document.body.classList.add('auth');document.body.classList.remove('menu');
-  const su=mode==='signup';
+  const su=!!FIRST; // chỉ khi hệ thống chưa có tài khoản nào: tạo quản trị viên đầu tiên
   $('#view').innerHTML=`<div class="card" style="max-width:380px;margin:8vh auto">
    <h1>🏸 Phân lịch cầu lông</h1>
-   <div class="row" style="margin-bottom:12px"><button class="${su?'':'pri'}" onclick="showAuth('login')">Đăng nhập</button><button class="${su?'pri':''}" onclick="showAuth('signup')">Tạo tài khoản</button></div>
+   <h2 style="margin-top:4px">${su?'Tạo quản trị viên đầu tiên':'Đăng nhập'}</h2>
    ${msg?`<p style="background:var(--soft);padding:8px 10px;border-radius:8px">${esc(msg)}</p>`:''}
-   <form onsubmit="authSubmit('${mode}');return false">
-   ${su?`<p><input type="text" id="an" placeholder="Họ tên hiển thị (sẽ hiện trên lịch)" maxlength="60" style="width:100%"></p>`:''}
-   <p><input type="text" id="au" placeholder="Tên đăng nhập (chữ thường không dấu)" autocomplete="username" style="width:100%" autocapitalize="none"></p>
-   <p><input type="password" id="ap" placeholder="Mật khẩu (tối thiểu 6 ký tự)" autocomplete="${su?'new-password':'current-password'}" style="width:100%"></p>
+   <form onsubmit="authSubmit('${su?'signup':'login'}');return false">
+   ${su?`<p><input type="text" id="an" placeholder="Họ tên hiển thị" maxlength="60" style="width:100%"></p>`:''}
+   <p><input type="text" id="au" placeholder="Tên đăng nhập" autocomplete="username" style="width:100%" autocapitalize="none"></p>
+   <p><input type="password" id="ap" placeholder="Mật khẩu${su?' (tối thiểu 6 ký tự)':''}" autocomplete="${su?'new-password':'current-password'}" style="width:100%"></p>
    <button class="pri" type="submit" style="width:100%">${su?'Tạo tài khoản':'Đăng nhập'}</button></form>
-   ${su?`<p class="mute">${FIRST?'Tài khoản đầu tiên sẽ là quản trị viên.':'Tài khoản cần được quản trị viên duyệt trước khi đăng nhập được.'}</p>`:''}</div>`;
+   <p class="mute">${su?'Tài khoản này sẽ có quyền quản trị.':'Tài khoản do quản trị viên cấp. Quên mật khẩu hãy liên hệ quản trị viên.'}</p></div>`;
 }
 async function authSubmit(mode){
   const body={username:$('#au').value,password:$('#ap').value};
   if(mode==='signup')body.name=$('#an').value;
   try{
     const j=await api('POST','/api/'+(mode==='signup'?'signup':'login'),body);
-    if(j.pending){showAuth('login','Đã tạo tài khoản. Vui lòng chờ quản trị viên duyệt, sau đó bạn có thể đăng nhập.');return false}
     ME=j.user;tab='reg';await load();
   }catch(e){}
   return false}
@@ -131,7 +129,7 @@ function render(){
   document.body.classList.remove('auth');
   const n=S?Object.keys(S.week.registrations).length:0;
   const items=isAdmin()
-   ?[['Đăng ký',[['reg','Đăng ký mới'],['list','Danh sách đăng ký',n]]],['Lịch',[['sch','Lịch tuần']]],['Cấu hình',[['courts','Sân & khung giờ'],['users','Tài khoản',PENDING||undefined]]],['Báo cáo',[['st','Thống kê']]]]
+   ?[['Đăng ký',[['reg','Đăng ký mới'],['list','Danh sách đăng ký',n]]],['Lịch',[['sch','Lịch tuần']]],['Cấu hình',[['courts','Sân & khung giờ'],['users','Tài khoản']]],['Báo cáo',[['st','Thống kê']]]]
    :[['Lịch',[['reg','Đăng ký lịch'],['sch','Lịch tuần']]]];
   $('#nav').innerHTML=items.map(([g,bs])=>`<div class="grp">${g}</div>`+bs.map(([k,l,c])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}${c!==undefined?`<span class="badge">${c}</span>`:''}</button>`).join('')).join('')
    +`<div class="grp">Tài khoản</div><div style="padding:0 10px 6px"><b>${esc(ME.name)}</b><br><span class="mute">${isAdmin()?'Quản trị viên':'Thành viên'} · ${esc(ME.username)}</span></div>
@@ -221,12 +219,9 @@ function schView(){
    <td data-l="Được xếp">${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;
 }
 async function usersView(){
-  const us=await api('GET','/api/users');PENDING=us.filter(u=>u.status==='pending').length;
-  const pend=us.filter(u=>u.status==='pending'),act=us.filter(u=>u.status!=='pending');
+  const act=await api('GET','/api/users');
   const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
-  $('#view').innerHTML=`<div class="card"><h2>Chờ duyệt (${pend.length})</h2>${pend.length?`<table class="stack"><tr><th>Họ tên</th><th>Tên đăng nhập</th><th></th></tr>`+
-   pend.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td data-l="Tên đăng nhập">${esc(u.username)}</td><td class="num act"><button class="pri" onclick="uAct('approve',${q(u)})">Duyệt</button> <button onclick="uDel(${q(u)})">Từ chối</button></td></tr>`).join('')+'</table>':'<span class="mute">Không có tài khoản nào chờ duyệt.</span>'}</div>
-  <div class="card"><h2>Thêm tài khoản</h2>
+  $('#view').innerHTML=`<div class="card"><h2>Thêm tài khoản</h2>
    <div class="row"><input type="text" id="nu_name" placeholder="Họ tên" maxlength="60" size="24"><input type="text" id="nu_dept" placeholder="Bộ phận (tuỳ chọn)" size="14">
     <input type="text" id="nu_user" placeholder="Tên đăng nhập" size="14" autocapitalize="none"><input type="text" id="nu_pw" placeholder="Mật khẩu (trống = tên ĐN)" size="22">
     <label class="row"><input type="checkbox" id="nu_admin"> Quản trị viên</label><button class="pri" onclick="uAdd()">Thêm</button></div>
@@ -237,8 +232,6 @@ async function usersView(){
   <div class="card"><h2>Tài khoản (${act.length})</h2><table class="stack"><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th></th></tr>
    ${act.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td data-l="Tên đăng nhập">${esc(u.username)}</td><td data-l="Quyền">${u.role==='admin'?'Quản trị viên':'Thành viên'}</td>
    <td class="num act">${u.username===ME.username?'<span class="mute">(bạn)</span>':`<button onclick="uRole(${q(u)},'${u.role==='admin'?'member':'admin'}')">${u.role==='admin'?'Bỏ quyền QTV':'Cấp quyền QTV'}</button> <button onclick="uPw(${q(u)})">Đặt lại MK</button> <button onclick="uDel(${q(u)})">Xóa</button>`}</td></tr>`).join('')}</table></div>`;
-  const nb=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.startsWith('Tài khoản'));
-  if(nb)nb.innerHTML='Tài khoản'+(PENDING?`<span class="badge">${PENDING}</span>`:'');
 }
 function uReport(r){
   let m='Đã tạo '+r.created.length+' tài khoản.';
