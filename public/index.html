@@ -27,6 +27,7 @@ input[type=number]{width:60px;border:1px solid var(--line);border-radius:8px;pad
 .days{position:relative;display:flex;gap:6px;flex-wrap:wrap}
 .days label{border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;user-select:none}
 .days label.on{background:var(--soft);border-color:var(--pri)}.days input{display:none}
+.rules{background:var(--soft);border-radius:10px;padding:10px 14px;margin:0 0 12px;font-size:13.5px}.rules ul{margin:6px 0 0;padding-left:18px}.rules li{margin:2px 0}
 .pop{position:absolute;z-index:5;width:min(340px,100%);max-height:50vh;overflow:auto;background:var(--card);border:1px solid var(--pri);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .days label.off{opacity:.4;pointer-events:none}
 table{border-collapse:collapse;width:100%}td{overflow-wrap:anywhere}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;font-size:14px}
@@ -125,20 +126,36 @@ async function authSubmit(mode){
 async function logout(){await api('POST','/api/logout',{});ME=null;S=null;FIRST=false;showAuth()}
 function meView(){
   return `<div class="card" style="max-width:480px"><h2>Đổi mật khẩu</h2>
+   <div class="rules"><b>Quy tắc mật khẩu</b><ul>
+    <li>Tối thiểu <b>6 ký tự</b> (nên dùng cả chữ và số, dài hơn càng an toàn).</li>
+    <li>Phải nhập đúng <b>mật khẩu hiện tại</b> và nhập lại mật khẩu mới hai lần giống nhau.</li>
+    <li>Không dùng mã nhân viên hay tên đăng nhập làm mật khẩu.</li>
+    <li>Quên mật khẩu hiện tại: liên hệ quản trị viên để đặt lại.</li></ul></div>
    <p><input type="password" id="pw_old" placeholder="Mật khẩu hiện tại" autocomplete="current-password" style="width:100%"></p>
    <p><input type="password" id="pw_new" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" autocomplete="new-password" style="width:100%"></p>
    <p><input type="password" id="pw_new2" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password" style="width:100%"></p>
    <button class="pri" onclick="doPw()">Đổi mật khẩu</button></div>
   <div class="card" style="max-width:480px"><h2>Đổi tên đăng nhập</h2>
-   <p class="mute">Hiện tại: <b>${esc(ME.username)}</b> · Chỉ dùng chữ thường không dấu, số, dấu . _ -</p>
+   <p class="mute">Tên đăng nhập hiện tại: <b>${esc(ME.username)}</b></p>
+   <div class="rules"><b>Quy tắc tên đăng nhập</b><ul>
+    <li>Dài từ <b>3 đến 30 ký tự</b>.</li>
+    <li>Chỉ gồm <b>chữ thường không dấu</b> (a–z), <b>số</b> (0–9) và các dấu <b>. _ -</b>; không có khoảng trắng. Chữ hoa sẽ tự chuyển thành chữ thường.</li>
+    <li>Không được <b>trùng</b> với tên đăng nhập của người khác.</li>
+    <li>Phải nhập đúng <b>mật khẩu hiện tại</b> để xác nhận.</li>
+    <li>Đổi xong, từ lần sau bạn <b>đăng nhập bằng tên mới</b> (mật khẩu giữ nguyên). Lịch đăng ký của bạn không bị mất. Tên hiển thị trên lịch không đổi.</li></ul></div>
    <p><input type="text" id="un_new" placeholder="Tên đăng nhập mới" autocapitalize="none" style="width:100%"></p>
    <p><input type="password" id="un_pw" placeholder="Mật khẩu hiện tại (để xác nhận)" autocomplete="current-password" style="width:100%"></p>
    <button class="pri" onclick="doUn()">Đổi tên đăng nhập</button></div>`}
 async function doPw(){
-  if($('#pw_new').value!==$('#pw_new2').value){alert('Hai lần nhập mật khẩu mới không khớp');return}
+  const n=$('#pw_new').value;
+  if(n.length<6){alert('Mật khẩu mới phải có tối thiểu 6 ký tự');return}
+  if(n!==$('#pw_new2').value){alert('Hai lần nhập mật khẩu mới không khớp');return}
+  if(n===ME.username){alert('Không dùng tên đăng nhập làm mật khẩu');return}
   await api('POST','/api/password',{old:$('#pw_old').value,password:$('#pw_new').value});
   alert('Đã đổi mật khẩu');render()}
 async function doUn(){
+  const u=$('#un_new').value.trim().toLowerCase();
+  if(!/^[a-z0-9_.-]{3,30}$/.test(u)){alert('Tên đăng nhập phải dài 3–30 ký tự, chỉ gồm chữ thường không dấu, số và các dấu . _ -, không có khoảng trắng');return}
   const r=await api('POST','/api/username',{username:$('#un_new').value,password:$('#un_pw').value});
   ME=r.user;alert('Đã đổi tên đăng nhập. Từ lần sau hãy đăng nhập bằng: '+ME.username);render()}
 function shift(n){const d=new Date(wk+'T12:00');d.setDate(d.getDate()+7*n);wk=iso(d);load()}
