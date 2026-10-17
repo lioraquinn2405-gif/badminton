@@ -287,7 +287,11 @@ async function uBulk(){
   uReport(await api('POST','/api/users',{users}));usersView()}
 async function uAct(a,u){await api('PUT','/api/users/'+a,{username:u});usersView()}
 async function uRole(u,r){await api('PUT','/api/users/role',{username:u,role:r});usersView()}
-async function uPw(u){const p=prompt('Mật khẩu mới cho '+u+' (tối thiểu 6 ký tự):');if(p){await api('PUT','/api/users/password',{username:u,password:p});alert('Đã đặt lại mật khẩu')}}
+async function uPw(u){
+  const p=prompt('Đặt lại mật khẩu cho "'+u+'".\nGiữ nguyên ô dưới để đặt về mật khẩu = tên đăng nhập, hoặc gõ mật khẩu khác (tối thiểu 6 ký tự).',u);
+  if(p===null)return;
+  await api('PUT','/api/users/password',{username:u,password:p||u});
+  alert('Đã đặt lại mật khẩu cho '+u+'.\nHãy báo người dùng đăng nhập rồi đổi mật khẩu trong mục "Tài khoản của tôi".')}
 async function uDel(u){if(confirm('Xóa tài khoản '+u+'?')){await api('DELETE','/api/users',{username:u});usersView()}}
 async function stats(){
   const s=await api('GET','/api/stats');
