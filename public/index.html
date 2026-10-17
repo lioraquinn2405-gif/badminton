@@ -22,7 +22,7 @@ button,input,select{font:inherit;color:inherit}
 button{border:1px solid var(--line);background:var(--card);padding:6px 12px;border-radius:8px;cursor:pointer}
 button.pri{background:var(--pri);border-color:var(--pri);color:#fff}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
+input[type=text],input[type=password]{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
 input[type=number]{width:60px;border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--bg)}
 .days{position:relative;display:flex;gap:6px;flex-wrap:wrap}
 .days label{border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;user-select:none}
@@ -123,7 +123,24 @@ async function authSubmit(mode){
   }catch(e){}
   return false}
 async function logout(){await api('POST','/api/logout',{});ME=null;S=null;FIRST=false;showAuth()}
-async function chPw(){const o=prompt('Mật khẩu hiện tại:');if(o===null)return;const n=prompt('Mật khẩu mới (tối thiểu 6 ký tự):');if(!n)return;await api('POST','/api/password',{old:o,password:n});alert('Đã đổi mật khẩu')}
+function meView(){
+  return `<div class="card" style="max-width:480px"><h2>Đổi mật khẩu</h2>
+   <p><input type="password" id="pw_old" placeholder="Mật khẩu hiện tại" autocomplete="current-password" style="width:100%"></p>
+   <p><input type="password" id="pw_new" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" autocomplete="new-password" style="width:100%"></p>
+   <p><input type="password" id="pw_new2" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password" style="width:100%"></p>
+   <button class="pri" onclick="doPw()">Đổi mật khẩu</button></div>
+  <div class="card" style="max-width:480px"><h2>Đổi tên đăng nhập</h2>
+   <p class="mute">Hiện tại: <b>${esc(ME.username)}</b> · Chỉ dùng chữ thường không dấu, số, dấu . _ -</p>
+   <p><input type="text" id="un_new" placeholder="Tên đăng nhập mới" autocapitalize="none" style="width:100%"></p>
+   <p><input type="password" id="un_pw" placeholder="Mật khẩu hiện tại (để xác nhận)" autocomplete="current-password" style="width:100%"></p>
+   <button class="pri" onclick="doUn()">Đổi tên đăng nhập</button></div>`}
+async function doPw(){
+  if($('#pw_new').value!==$('#pw_new2').value){alert('Hai lần nhập mật khẩu mới không khớp');return}
+  await api('POST','/api/password',{old:$('#pw_old').value,password:$('#pw_new').value});
+  alert('Đã đổi mật khẩu');render()}
+async function doUn(){
+  const r=await api('POST','/api/username',{username:$('#un_new').value,password:$('#un_pw').value});
+  ME=r.user;alert('Đã đổi tên đăng nhập. Từ lần sau hãy đăng nhập bằng: '+ME.username);render()}
 function shift(n){const d=new Date(wk+'T12:00');d.setDate(d.getDate()+7*n);wk=iso(d);load()}
 function render(){
   document.body.classList.remove('auth');
@@ -133,12 +150,13 @@ function render(){
    :[['Lịch',[['reg','Đăng ký lịch'],['sch','Lịch tuần']]]];
   $('#nav').innerHTML=items.map(([g,bs])=>`<div class="grp">${g}</div>`+bs.map(([k,l,c])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}${c!==undefined?`<span class="badge">${c}</span>`:''}</button>`).join('')).join('')
    +`<div class="grp">Tài khoản</div><div style="padding:0 10px 6px"><b>${esc(ME.name)}</b><br><span class="mute">${isAdmin()?'Quản trị viên':'Thành viên'} · ${esc(ME.username)}</span></div>
-   <button onclick="chPw()">Đổi mật khẩu</button><button onclick="logout()">Đăng xuất</button>`;
+   <button class="${tab==='me'?'on':''}" onclick="go('me')">Tài khoản của tôi</button><button onclick="logout()">Đăng xuất</button>`;
   if(tab==='st'&&isAdmin())return stats();
   if(tab==='users'&&isAdmin())return usersView();
+  if(tab==='me'){$('#view').innerHTML=meView();return}
   const bar=`<div class="card row"><button onclick="shift(-1)">‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
    <button onclick="wk='${iso(monday(new Date()))}';load()">Tuần này</button></div>`;
-  if(!isAdmin()&&!['reg','sch'].includes(tab))tab='reg';
+  if(!isAdmin()&&!['reg','sch','me'].includes(tab))tab='reg';
   $('#view').innerHTML=bar+({reg:regView,list:listView,courts:courtsView,sch:schView}[tab])();
   if(tab==='reg'&&isAdmin()&&viewDay!==null)showDay(viewDay);
 }
