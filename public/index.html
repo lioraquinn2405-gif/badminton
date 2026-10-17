@@ -268,7 +268,7 @@ async function usersView(){
   const q=u=>JSON.stringify(u.username).replace(/"/g,'&quot;');
   $('#view').innerHTML=`<div class="card"><h2>Thêm tài khoản</h2>
    <div class="row"><input type="text" id="nu_name" placeholder="Họ tên" maxlength="60" size="24"><input type="text" id="nu_dept" placeholder="Bộ phận (tuỳ chọn)" size="14">
-    <input type="text" id="nu_user" placeholder="Tên đăng nhập" size="14" autocapitalize="none"><input type="text" id="nu_pw" placeholder="Mật khẩu (trống = tên ĐN)" size="22">
+    <input type="text" id="nu_user" placeholder="Tên đăng nhập" size="14" autocapitalize="none"><input type="text" id="nu_pw" placeholder="Mật khẩu" size="16">
     <label class="row"><input type="checkbox" id="nu_admin"> Quản trị viên</label><button class="pri" onclick="uAdd()">Thêm</button></div>
    <details style="margin-top:12px"><summary style="cursor:pointer"><b>Thêm hàng loạt</b> (dán từ Excel)</summary>
     <p class="mute">Mỗi dòng: <b>Mã nhân viên</b> ⇥ <b>Họ tên</b> ⇥ <b>Bộ phận</b> (copy thẳng từ Excel). Tên đăng nhập và mật khẩu đều là mã nhân viên, tên hiển thị dạng "Họ tên (Bộ phận)". Dòng tiêu đề tự bỏ qua.</p>
