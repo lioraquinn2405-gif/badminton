@@ -43,6 +43,7 @@ th{color:var(--mute);font-weight:600}.num{text-align:right}
 .kpi b{display:block;font-size:22px}
 
 .topbar{display:none}
+.weekbar{position:sticky;top:8px;z-index:10;box-shadow:0 2px 8px rgba(18,38,29,.08)}
 body.auth aside,body.auth .topbar{display:none!important}
 body.auth .app{display:block}
 .card{overflow-x:auto}
@@ -52,6 +53,7 @@ table.stack td.act{white-space:normal}
  .app{display:block}
  .topbar{display:flex;position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding:8px 14px;justify-content:space-between;align-items:center}
  .topbar button{padding:8px 14px}
+ .weekbar{top:61px}
  aside{display:none;position:fixed;top:53px;left:0;right:0;bottom:0;z-index:15;width:auto;height:auto;overflow:auto;border:0;padding:6px 12px 28px}
  body.menu aside{display:block}
  aside h1{display:none}aside .grp{display:block}
@@ -171,7 +173,7 @@ function render(){
   if(tab==='st'&&isAdmin())return stats();
   if(tab==='users'&&isAdmin())return usersView();
   if(tab==='me'){$('#view').innerHTML=meView();return}
-  const bar=`<div class="card row"><button onclick="shift(-1)">‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
+  const bar=`<div class="card row weekbar"><button onclick="shift(-1)">‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
    <button onclick="wk='${iso(monday(new Date()))}';load()">Tuần này</button>
    ${isAdmin()?'<button class="pri" style="margin-left:auto" onclick="assign()">⚙ Phân lịch tự động</button>':''}</div>`;
   if(!isAdmin()&&!['reg','sch','me'].includes(tab))tab='reg';
