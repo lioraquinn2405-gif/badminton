@@ -166,7 +166,7 @@ function render(){
   const n=S?Object.keys(S.week.registrations).length:0;
   const items=isAdmin()
    ?[['Đăng ký',[['reg','Đăng ký mới'],['list','Danh sách đăng ký',n]]],['Lịch',[['sch','Lịch tuần']]],['Cấu hình',[['courts','Sân & khung giờ'],['users','Tài khoản']]],['Báo cáo',[['st','Thống kê']]]]
-   :[['Lịch',[['reg','Đăng ký lịch'],['sch','Lịch tuần']]]];
+   :[['Lịch',[['reg','Đăng ký lịch'],['list','Danh sách đăng ký',(S&&S.registered||[]).length],['sch','Lịch tuần']]]];
   $('#nav').innerHTML=items.map(([g,bs])=>`<div class="grp">${g}</div>`+bs.map(([k,l,c])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}${c!==undefined?`<span class="badge">${c}</span>`:''}</button>`).join('')).join('')
    +`<div class="grp">Tài khoản</div><div style="padding:0 10px 6px"><b>${esc(ME.name)}</b><br><span class="mute">${isAdmin()?'Quản trị viên':'Thành viên'} · ${esc(ME.username)}</span></div>
    <button class="${tab==='me'?'on':''}" onclick="go('me')">Tài khoản của tôi</button><button onclick="logout()">Đăng xuất</button>`;
@@ -176,7 +176,7 @@ function render(){
   const bar=`<div class="card row weekbar"><button onclick="shift(-1)">‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
    <button onclick="wk='${iso(monday(new Date()))}';load()">Tuần này</button>
    ${isAdmin()?'<button class="pri" style="margin-left:auto" onclick="assign()">⚙ Phân lịch tự động</button>':''}</div>`;
-  if(!isAdmin()&&!['reg','sch','me'].includes(tab))tab='reg';
+  if(!isAdmin()&&!['reg','list','sch','me'].includes(tab))tab='reg';
   $('#view').innerHTML=bar+({reg:regView,list:listView,courts:courtsView,sch:schView}[tab])();
   if(tab==='reg'&&viewDay!==null)showDay(viewDay);
 }
@@ -185,7 +185,7 @@ function regParts(){
   const w=S.week,regs=Object.values(w.registrations);
   const active=CT.map(c=>c.length>0);
   const cnt=S.counts, adm=isAdmin(), mine=adm?null:w.registrations[ME.name];
-  const pub=(S.registered||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,'vi'));
+  const lst=adm?regs:(S.registered||[]).map(r=>({...r}));
   return {courts:`<div class="card"><h2>Sân & khung giờ từng ngày <span class="mute">(ưu tiên ${S.settings.perCourt} người/sân, quá khó xếp mới nới tới ${S.settings.maxPerCourt})</span></h2>
    <div class="grid">${DAYS.map((d,i)=>`<div class="day"><b>${d} ${fmt(wk,i)}</b> <span class="mute">· ${cnt[i]} người đăng ký</span>
     ${CT[i].map((t,j)=>`<div class="row" style="margin-top:6px"><span class="row" style="gap:4px"><b>Sân</b><input type="text" inputmode="numeric" value="${esc((t.name||'').replace(/^Sân\s*/i,''))}" placeholder="${j+1}" size="3" style="width:56px;text-align:center" oninput="CT[${i}][${j}].name=this.value.trim()?'Sân '+this.value.trim():''"></span>
@@ -202,13 +202,11 @@ function regParts(){
    :`<p>Đăng ký cho: <b>${esc(ME.name)}</b>${mine?` <span class="mute">· đã đăng ký ${mine.days.length} ngày</span>`:''}</p>`}
    <div class="days" id="dsel">${active.some(Boolean)?'':'<span class="mute">Tuần này chưa có sân nào.</span>'}${DAYS.map((d,i)=>!active[i]?'':`<label data-day="${i}" class="${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);showDay(${i})">${d} ${fmt(wk,i)}<br><small class="mute">${cnt[i]} người đăng ký / ${CT[i].length*S.settings.perCourt} chỗ</small></label>`).join('')}<div id="dlist"></div></div>
    <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
-   ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>
-   <div class="card"><h2>Đã đăng ký (${pub.length})</h2>
-   ${pub.length?`<table class="stack"><tr><th>Họ tên</th><th>Ngày</th><th>Số buổi</th></tr>${pub.map(r=>`<tr><td><b>${esc(r.name)}</b>${r.name===ME.name?' <span class="mute">(bạn)</span>':''}</td><td data-l="Ngày">${r.days.slice().sort().map(d=>DAYS[d]).join(', ')}</td><td data-l="Số buổi">${r.days.length} buổi</td></tr>`).join('')}</table>`:'<span class="mute">Chưa có ai đăng ký.</span>'}</div>`,
-   list:`<div class="card"><h2>Đã đăng ký (${regs.length})</h2>
-   ${regs.length?`<table class="stack"><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th><th></th></tr>`+
-   regs.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name)).map(r=>`<tr><td><b>${esc(r.name)}</b></td><td data-l="Ngày">${r.days.sort().map(d=>DAYS[d]).join(', ')}</td><td data-l="Số buổi">${r.days.length} buổi${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
-   <td class="num act"><button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button></td></tr>`).join('')+'</table>':'<span class="mute">Chưa có ai đăng ký.</span>'}
+   ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
+   list:`<div class="card"><h2>Đã đăng ký (${lst.length})</h2>
+   ${lst.length?`<table class="stack"><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th>${adm?'<th></th>':''}</tr>`+
+   lst.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name)).map(r=>`<tr><td><b>${esc(r.name)}</b>${!adm&&r.name===ME.name?' <span class="mute">(bạn)</span>':''}</td><td data-l="Ngày">${r.days.slice().sort().map(d=>DAYS[d]).join(', ')}</td><td data-l="Số buổi">${r.days.length} buổi${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
+   ${adm?`<td class="num act"><button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button></td>`:''}</tr>`).join('')+'</table>':'<span class="mute">Chưa có ai đăng ký.</span>'}
    </div>`};
 }
 const regView=()=>regParts().reg,listView=()=>regParts().list,courtsView=()=>regParts().courts;
