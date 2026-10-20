@@ -90,7 +90,10 @@ const cl=(L,i)=>{const t=L&&L[i];const o=typeof t==='object'&&t?t:{name:'',time:
 const pct=x=>(x*100).toFixed(0)+'%';
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 function monday(d){const x=new Date(d);x.setHours(12);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
-let ME=null,FIRST=false,viewDay=null,tab='reg',wk=iso(monday(new Date())),S=null,CT=[];
+// CLB bắt đầu từ tháng 11/2026: tuần đầu tiên là thứ Hai 02/11/2026, không mở các tuần trước đó
+const CLUB_START='2026-11-02';
+const thisWeek=()=>{const t=iso(monday(new Date()));return t<CLUB_START?CLUB_START:t};
+let ME=null,FIRST=false,viewDay=null,tab='reg',wk=thisWeek(),S=null,CT=[];
 const fmt=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return `${d.getDate()}/${d.getMonth()+1}`};
 async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
   const j=await r.json();
@@ -160,7 +163,7 @@ async function doUn(){
   if(!/^[a-z0-9_.-]{3,30}$/.test(u)){alert('Tên đăng nhập phải dài 3–30 ký tự, chỉ gồm chữ thường không dấu, số và các dấu . _ -, không có khoảng trắng');return}
   const r=await api('POST','/api/username',{username:$('#un_new').value,password:$('#un_pw').value});
   ME=r.user;alert('Đã đổi tên đăng nhập. Từ lần sau hãy đăng nhập bằng: '+ME.username);render()}
-function shift(n){const d=new Date(wk+'T12:00');d.setDate(d.getDate()+7*n);wk=iso(d);load()}
+function shift(n){const d=new Date(wk+'T12:00');d.setDate(d.getDate()+7*n);const k=iso(d);if(k<CLUB_START)return;wk=k;load()}
 function render(){
   document.body.classList.remove('auth');
   const n=S?Object.keys(S.week.registrations).length:0;
@@ -173,8 +176,8 @@ function render(){
   if(tab==='st'&&isAdmin())return stats();
   if(tab==='users'&&isAdmin())return usersView();
   if(tab==='me'){$('#view').innerHTML=meView();return}
-  const bar=`<div class="card row weekbar"><button onclick="shift(-1)">‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
-   <button onclick="wk='${iso(monday(new Date()))}';load()">Tuần này</button>
+  const bar=`<div class="card row weekbar"><button onclick="shift(-1)" ${wk<=CLUB_START?'disabled style="opacity:.35;cursor:default" title="CLB bắt đầu từ 02/11/2026"':''}>‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
+   <button onclick="wk='${thisWeek()}';load()">Tuần này</button>
    ${isAdmin()?'<button class="pri" style="margin-left:auto" onclick="assign()">⚙ Phân lịch tự động</button>':''}</div>`;
   if(!isAdmin()&&!['reg','list','sch','me'].includes(tab))tab='reg';
   $('#view').innerHTML=bar+({reg:regView,list:listView,courts:courtsView,sch:schView}[tab])();
