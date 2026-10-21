@@ -31,6 +31,10 @@ input[type=number]{width:60px;border:1px solid var(--line);border-radius:8px;pad
 .days label{border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;user-select:none}
 .days label.on{background:var(--soft);border-color:var(--pri)}.days input{display:none}
 .rules{background:var(--soft);border-radius:10px;padding:10px 14px;margin:0 0 12px;font-size:13.5px}.rules ul{margin:6px 0 0;padding-left:18px}.rules li{margin:2px 0}
+.multi{margin-top:14px;border-top:2px dashed var(--line);padding-top:14px}
+.mwlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.mw{display:flex;gap:10px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:8px 12px;cursor:pointer;background:var(--card)}
+.mw span{display:flex;flex-direction:column;line-height:1.3}.mw input{width:20px;height:20px;accent-color:var(--pri)}
 .pop{position:absolute;z-index:5;width:min(340px,100%);max-height:50vh;overflow:auto;background:var(--card);border:1px solid var(--pri);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .days label.off{opacity:.4;pointer-events:none}
 table{border-collapse:collapse;width:100%}td{overflow-wrap:anywhere}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;font-size:14px}
@@ -335,7 +339,8 @@ function regParts(){
     <label class="row"><input type="checkbox" id="one"> Trường hợp đặc biệt: chỉ 1 buổi</label></div>`
    :`<p>Đăng ký cho: <b>${esc(ME.name)}</b>${mine?` <span class="mute">· đã đăng ký ${mine.days.length} ngày</span>`:''}</p>`}
    <div class="days" id="dsel">${active.some(Boolean)?'':'<span class="mute">Tuần này chưa có sân nào.</span>'}${DAYS.map((d,i)=>!active[i]?'':`<label data-day="${i}" class="${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);showDay(${i})"><span class="dblock"><b>${d}</b><i>${dayNum(wk,i)}</i></span><span class="dmain"><span class="dtime">${esc(CT[i].map(c=>c.time).filter(Boolean).join(' · ')||'Có sân')}<span class="mute" style="font-weight:500"> · ${CT[i].length} sân</span></span><span class="dbar"><i class="${cnt[i]/(CT[i].length*S.settings.perCourt)>=.9?'hot':''}" style="width:${Math.min(100,Math.round(cnt[i]/(CT[i].length*S.settings.perCourt)*100))}%"></i></span><small class="mute"><b>${cnt[i]}</b> người đăng ký / ${CT[i].length*S.settings.perCourt} chỗ</small></span><span class="dtick"></span></label>`).join('')}<div id="dlist"></div></div>
-   <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
+   <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button><button onclick="openMulti()">Đăng ký cho các tuần khác</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
+   <div id="multi"></div>
    ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
    list:`<div class="card"><h2>Đã đăng ký (${lst.length})</h2>
    ${lst.length?`<table class="stack"><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th>${adm?'<th></th>':''}</tr>`+
@@ -360,6 +365,31 @@ document.addEventListener('click',e=>{
   if(viewDay===null||e.target.closest('#dlist')||e.target.closest('#dsel label'))return;
   hideDay();
 });
+async function openMulti(){
+  const box=$('#multi');
+  if(box.innerHTML){box.innerHTML='';return}
+  const days=[...document.querySelectorAll('#dsel input:checked')].map(i=>+i.value);
+  if(!days.length){alert('Hãy chọn ít nhất 1 ngày ở trên trước, rồi bấm lại nút này.');return}
+  const name=isAdmin()?($('#nm')?$('#nm').value.trim():''):ME.name;
+  if(!name){alert('Nhập họ tên người cần đăng ký trước.');return}
+  const mineW=await api('GET','/api/my-weeks?name='+encodeURIComponent(name));
+  const rows=Array.from({length:12},(_,k)=>{const w=wkAdd(wk,k+1);const had=mineW[w];
+    return `<label class="mw"><input type="checkbox" value="${w}" ${k<4?'checked':''}><span><b>Tuần ${fmt(w)} – ${fmt(w,6)}</b><small class="mute">${had?'đang đăng ký: '+had.slice().sort().map(d=>DAYS[d]).join(', '):'chưa đăng ký'}</small></span></label>`}).join('');
+  box.innerHTML=`<div class="multi"><h2 style="font-size:20px">Áp dụng cho các tuần khác</h2>
+   <p class="mute" style="margin:0 0 8px">Các ngày bạn đang chọn ở trên sẽ được đăng ký cho những tuần bạn tick dưới đây (kèm cả tuần đang xem). Tuần nào đã có đăng ký sẽ được thay bằng các ngày này.</p>
+   <div class="row" style="margin-bottom:8px"><button onclick="mwPick(4)">4 tuần tới</button><button onclick="mwPick(8)">8 tuần tới</button><button onclick="mwPick(12)">12 tuần tới</button><button onclick="mwPick(0)">Bỏ chọn</button></div>
+   <div class="mwlist">${rows}</div>
+   <p><button class="pri" onclick="applyMulti()">Đăng ký các tuần đã chọn</button></p></div>`;
+}
+function mwPick(n){document.querySelectorAll('#multi .mw input').forEach((c,i)=>c.checked=i<n)}
+async function applyMulti(){
+  const days=[...document.querySelectorAll('#dsel input:checked')].map(i=>+i.value);
+  const weeksSel=[...document.querySelectorAll('#multi .mw input:checked')].map(c=>c.value);
+  if(!days.length){alert('Hãy chọn ít nhất 1 ngày');return}
+  if(!weeksSel.length){alert('Hãy tick ít nhất 1 tuần');return}
+  if(!confirm('Đăng ký '+days.map(d=>DAYS[d]).join(', ')+' cho tuần đang xem và '+weeksSel.length+' tuần đã chọn?'))return;
+  const r=await api('PUT','/api/register',{week:wk,weeks:weeksSel,name:$('#nm')?$('#nm').value:undefined,days,minSessions:$('#one')&&$('#one').checked?1:2});
+  alert('Đã đăng ký cho '+r.weeks+' tuần.');load()}
 async function saveCourts(def){await api('PUT','/api/courts',{week:wk,courts:CT,setDefault:def});await load()}
 async function reg(){
   const days=[...document.querySelectorAll('#dsel input:checked')].map(i=>+i.value);
