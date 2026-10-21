@@ -1,9 +1,12 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Phân lịch cầu lông</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect x='1' y='1' width='26' height='26' rx='5' fill='%2308241B'/%3E%3Cpath d='M5 9h18M5 19h18M14 9v10M5 9v10M23 9v10' stroke='%23D2FF3C' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f5f7f4;--card:#fff;--ink:#1d2a22;--mute:#6b7a70;--line:#dfe6e0;--pri:#1f8a4c;--warn:#c0392b;--soft:#e8f5ec}
-@media(prefers-color-scheme:dark){:root{--bg:#141a16;--card:#1d2620;--ink:#e6efe8;--mute:#93a398;--line:#2f3b33;--soft:#22372a}}
+:root{--bg:#F3F6EF;--card:#fff;--ink:#08241B;--mute:#5B7468;--line:#DDE5D8;--pri:#0E5A3C;--warn:#C2410C;--soft:#E7EDE1;--dark:#08241B;--lime:#D2FF3C;--hot:#FF5B2E;--limesoft:#E6FF8A}
+@media(prefers-color-scheme:dark){:root{--bg:#0B1A14;--card:#122A21;--ink:#E6F2EA;--mute:#8FB39F;--line:#24443A;--pri:#2BAA6B;--soft:#1B3A2E;--dark:#050F0B;--limesoft:#2B3F12}}
 *{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
 .app{display:flex;min-height:100vh}
 aside{width:220px;flex:none;background:var(--card);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto}
@@ -42,13 +45,88 @@ th{color:var(--mute);font-weight:600}.num{text-align:right}
 .kpi{display:flex;gap:10px;flex-wrap:wrap}.kpi div{flex:1;min-width:130px;background:var(--soft);border-radius:10px;padding:10px}
 .kpi b{display:block;font-size:22px}
 
+
+/* ===== Giao diện thể thao ===== */
+body{font-family:'Be Vietnam Pro',system-ui,sans-serif}
+h1,h2{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;text-transform:uppercase;letter-spacing:.01em}
+h1{font-size:30px;line-height:1;margin:0 0 12px}h2{font-size:24px;line-height:1.05;margin:0 0 12px}
+aside{background:var(--dark);border-right:0;color:#fff}
+aside h1{display:flex;align-items:center;gap:10px;font-size:26px;color:#fff;margin:2px 0 8px;padding:0 8px}
+aside .grp{color:#5E8A74;font-weight:800;letter-spacing:.14em}
+aside .mute{color:#8FB39F}
+aside button{color:#CFE6D8;font-weight:600;border:0}
+aside button:hover{background:rgba(255,255,255,.08)}
+aside button.on{background:var(--lime);color:#08241B;font-weight:800;box-shadow:inset 4px 0 0 var(--hot)}
+aside .badge{background:rgba(210,255,60,.18);color:var(--lime);border-radius:6px;font-weight:800}
+aside button.on .badge{background:#08241B;color:var(--lime)}
+.card{border-radius:14px;border:2px solid var(--line)}
+button{border:2px solid var(--line);border-radius:10px;font-weight:600}
+button.pri{background:var(--dark);border-color:var(--dark);color:var(--lime);font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+input[type=text],input[type=password],input[type=number],textarea{border:2px solid #D3DDCB;border-radius:10px;background:var(--card)}
+th{text-transform:uppercase;font-size:12px;letter-spacing:.06em}
+.weekbar{background:var(--dark);border-color:var(--dark);color:#fff}
+.weekbar b{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:25px;line-height:1;color:#fff}
+.weekbar button{background:transparent;border-color:rgba(255,255,255,.22);color:var(--lime)}
+.weekbar button.pri{background:var(--lime);border-color:var(--lime);color:#08241B}
+.weekbar button[disabled]{opacity:.35}
+/* chọn ngày: thẻ có số ngày to */
+.days{display:flex;flex-direction:column;gap:10px}
+.days label{display:flex;align-items:stretch;border:2px solid var(--line);border-radius:14px;padding:0;overflow:hidden;background:var(--card)}
+.days label.on{background:var(--limesoft);border-color:var(--dark)}
+.dblock{width:72px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--soft);padding:8px 0}
+.dblock b{font-size:12px;letter-spacing:.12em}
+.dblock i{font:italic 800 36px/.95 'Barlow Condensed',sans-serif}
+.days label.on .dblock{background:var(--dark);color:var(--lime)}
+.dmain{flex:1;min-width:0;padding:10px 14px;display:flex;flex-direction:column;gap:5px}
+.dtime{font-weight:700}
+.dbar{height:7px;border-radius:2px;background:rgba(8,36,27,.12);overflow:hidden;display:block}
+.dbar i{display:block;height:100%;background:var(--pri)}.dbar i.hot{background:var(--hot)}
+.dtick{width:48px;flex:none;display:flex;align-items:center;justify-content:center}
+.dtick:after{content:"";width:26px;height:26px;border-radius:50%;border:2px solid #BFCBB8;box-sizing:border-box}
+.days label.on .dtick:after{background:var(--lime) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2308241B' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/15px no-repeat;border-color:var(--dark)}
+/* màn hình chính */
+.homecard{border-radius:20px;border:0;background:var(--pri);color:#fff;min-height:190px;position:relative;overflow:hidden}
+.homecard:hover{border:0;filter:brightness(1.06)}
+.homecard .hc-t{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:36px;line-height:.98;text-transform:uppercase;letter-spacing:0}
+.homecard .hc-s{color:#CFE6D8}
+.homecard .hc-w{align-self:flex-start;background:var(--lime);color:#08241B;padding:5px 12px;transform:skewX(-10deg);font-weight:800;letter-spacing:.05em;font-size:12.5px;margin-top:auto}
+.homecard.main{background:var(--lime);color:#08241B}.homecard.main .hc-s{color:#27412F}.homecard.main .hc-w{background:#08241B;color:var(--lime)}
+.homecard:before{content:"";position:absolute;right:-26px;bottom:-14px;width:150px;height:105px;border:3px solid currentColor;opacity:.13;border-radius:4px}
+/* tỉ số */
+.kpi div{background:var(--dark);color:#8FB39F;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:12px}
+.kpi b{font:italic 800 42px/1 'Barlow Condensed',sans-serif;color:var(--lime);letter-spacing:0;text-transform:none}
+/* lịch của bạn + thẻ ngày */
+.mine{background:var(--lime);border:0;color:#08241B}
+.mine .mrow{display:flex;gap:12px;align-items:center;background:#08241B;color:#fff;border-radius:10px;padding:8px 12px;margin-top:8px;font-weight:600}
+.mine .mrow b{font:italic 800 24px/1 'Barlow Condensed',sans-serif;color:var(--lime);min-width:84px}
+.sday{border:2px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card)}
+.sday.me{border-color:var(--dark)}.sday.over{border-color:var(--hot)}
+.sd-head{display:flex}.sd-head .dblock{width:78px}
+.sday.me .dblock{background:var(--dark);color:var(--lime)}.sday.over .dblock{background:var(--hot);color:#08241B}
+.sd-count{display:flex;justify-content:space-between;align-items:baseline}
+.sd-count span{font:italic 800 28px/1 'Barlow Condensed',sans-serif}.sd-count span small{font-size:17px;opacity:.6}
+.sd-count em{font-style:normal;font-size:12.5px;color:var(--mute);font-weight:600}
+.sday.over .sd-count span{color:var(--hot)}
+.segs{display:flex;gap:3px;margin:7px 0 5px}.segs i{flex:1;height:7px;border-radius:2px;background:var(--line)}.segs i.on{background:var(--pri)}.segs i.hot{background:var(--hot)}
+.sd-time{font-size:12.5px;color:var(--mute)}.sday.over .sd-time{color:var(--warn);font-weight:700}
+.sday .plist{padding:6px 16px 12px;margin:0;border-top:1px solid var(--line)}
+.plist li.me span{font-weight:800;color:var(--pri)}
+/* đăng nhập */
+body.auth{background:var(--dark)}
+body.auth main{padding:0;max-width:none}
+.authwrap{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:repeating-linear-gradient(-62deg,rgba(210,255,60,.05) 0 18px,transparent 18px 44px)}
+.authhero{padding:72px 28px 28px;color:#fff}
+.authtag{display:inline-block;background:var(--lime);color:#08241B;font-weight:800;font-size:12px;letter-spacing:.14em;padding:5px 12px;transform:skewX(-12deg);margin-top:14px}
+.authtitle{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:62px;line-height:.92;text-transform:uppercase;margin:14px 0 0;color:#fff}
+.authtitle em{color:var(--lime);font-style:italic}
+.authcard{margin-top:auto;background:var(--bg);color:var(--ink);border-radius:26px 26px 0 0;padding:24px 24px 30px;position:relative}
+.authcard:before{content:"";position:absolute;left:24px;top:-6px;width:84px;height:6px;background:var(--lime)}
+.authcard label{display:block;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:14px 0 6px}
+.authcard input{width:100%;height:52px;font-size:16px;padding:0 16px}
+.authcard button.pri{width:100%;height:56px;margin-top:20px;font-size:24px}
 .topbar{display:none}
 .homegrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.homecard{display:flex;flex-direction:column;gap:6px;text-align:left;padding:22px;border-radius:18px;border:1px solid var(--line);background:var(--card);cursor:pointer;min-height:170px;color:inherit}
-.homecard:hover{border-color:var(--pri)}
-.homecard .hc-t{font-size:19px;font-weight:800;letter-spacing:-.01em}.homecard .hc-s{color:var(--mute);font-size:14px;line-height:1.4}
-.homecard .hc-w{margin-top:auto;font-weight:700;color:var(--pri);font-size:14px}
-.homecard.main{background:var(--pri);border-color:var(--pri);color:#fff}.homecard.main .hc-s{color:#D6E8DC}.homecard.main .hc-w{color:#D4F25A}
+.homecard{display:flex;flex-direction:column;gap:6px;text-align:left;padding:22px;cursor:pointer}
 .weekbar{position:sticky;top:8px;z-index:10;box-shadow:0 2px 8px rgba(18,38,29,.08)}
 body.auth aside,body.auth .topbar{display:none!important}
 body.auth .app{display:block}
@@ -84,9 +162,23 @@ table.stack td.act{white-space:normal}
  table.stack td.act{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
  .pop{position:fixed!important;left:12px!important;right:12px;top:auto!important;bottom:12px;width:auto;max-height:60vh}
 }
+
+@media(max-width:760px){
+ .topbar{background:var(--dark);border-bottom:0;color:#fff}
+ .topbar b{display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.03em}
+ .topbar button{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
+ aside{top:59px}
+ .days{display:flex;flex-direction:column}
+ .days label{padding:0}
+ h1{font-size:26px}
+ .weekbar{top:67px}
+ .homecard{min-height:150px}.homecard .hc-t{font-size:32px}
+ .kpi div{min-width:calc(50% - 10px)}
+ .authhero{padding-top:56px}
+}
 </style></head><body><div class="app">
-<div class="topbar"><b>🏸 Phân lịch cầu lông</b><button id="menuBtn" onclick="document.body.classList.toggle('menu')" aria-label="Menu">☰ Menu</button></div>
-<aside><h1>🏸 Phân lịch cầu lông</h1><div id="nav"></div></aside>
+<div class="topbar"><b><svg width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="38" r="8" fill="#D2FF3C"/><path d="M16 33 L6 6 M20 31 L16 3 M24 30 V1 M28 31 L32 3 M32 33 L42 6" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/></svg> CLB Cầu lông</b><button id="menuBtn" onclick="document.body.classList.toggle('menu')" aria-label="Menu">☰ Menu</button></div>
+<aside><h1><svg width="30" height="30" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="38" r="8" fill="#D2FF3C"/><path d="M16 33 L6 6 M20 31 L16 3 M24 30 V1 M28 31 L32 3 M32 33 L42 6" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/></svg> CLB Cầu lông</h1><div id="nav"></div></aside>
 <main><div id="view"></div></main>
 </div>
 <script>
@@ -107,6 +199,7 @@ const regDefault=()=>clampStart(wkAdd(iso(monday(new Date())),1)); // đăng ký
 const weeks={reg:regDefault(),sch:schDefault()};
 let curSec='reg';
 let ME=null,FIRST=false,viewDay=null,tab='home',wk=weeks.reg,S=null,CT=[];
+const dayNum=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return String(d.getDate()).padStart(2,'0')};
 const fmt=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return `${d.getDate()}/${d.getMonth()+1}`};
 async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
   const j=await r.json();
@@ -123,16 +216,16 @@ async function boot(){
 function showAuth(mode,msg=''){
   document.body.classList.add('auth');document.body.classList.remove('menu');
   const su=!!FIRST; // chỉ khi hệ thống chưa có tài khoản nào: tạo quản trị viên đầu tiên
-  $('#view').innerHTML=`<div class="card" style="max-width:380px;margin:8vh auto">
-   <h1>🏸 Phân lịch cầu lông</h1>
-   <h2 style="margin-top:4px">${su?'Tạo quản trị viên đầu tiên':'Đăng nhập'}</h2>
-   ${msg?`<p style="background:var(--soft);padding:8px 10px;border-radius:8px">${esc(msg)}</p>`:''}
+  $('#view').innerHTML=`<div class="authwrap"><div class="authhero"><svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="38" r="8" fill="#D2FF3C"/><path d="M16 33 L6 6 M20 31 L16 3 M24 30 V1 M28 31 L32 3 M32 33 L42 6" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/></svg>
+   <br><span class="authtag">CLB CẦU LÔNG</span>
+   <h1 class="authtitle">${su?'Tạo<br>quản trị<br><em>viên.</em>':'Đăng ký.<br>Xếp sân.<br><em>Ra chơi.</em>'}</h1></div>
+   <div class="authcard">${msg?`<p style="background:var(--soft);padding:8px 10px;border-radius:8px">${esc(msg)}</p>`:''}
    <form onsubmit="authSubmit('${su?'signup':'login'}');return false">
-   ${su?`<p><input type="text" id="an" placeholder="Họ tên hiển thị" maxlength="60" style="width:100%"></p>`:''}
-   <p><input type="text" id="au" placeholder="Tên đăng nhập" autocomplete="username" style="width:100%" autocapitalize="none"></p>
-   <p><input type="password" id="ap" placeholder="Mật khẩu${su?' (tối thiểu 6 ký tự)':''}" autocomplete="${su?'new-password':'current-password'}" style="width:100%"></p>
-   <button class="pri" type="submit" style="width:100%">${su?'Tạo tài khoản':'Đăng nhập'}</button></form>
-   <p class="mute">${su?'Tài khoản này sẽ có quyền quản trị.':'Tài khoản do quản trị viên cấp. Quên mật khẩu hãy liên hệ quản trị viên.'}</p></div>`;
+   ${su?`<label for="an">Họ tên hiển thị</label><input type="text" id="an" maxlength="60">`:''}
+   <label for="au">Tên đăng nhập</label><input type="text" id="au" autocomplete="username" autocapitalize="none">
+   <label for="ap">Mật khẩu${su?' (tối thiểu 6 ký tự)':''}</label><input type="password" id="ap" autocomplete="${su?'new-password':'current-password'}">
+   <button class="pri" type="submit">${su?'Tạo tài khoản':'Vào sân →'}</button></form>
+   <p class="mute" style="text-align:center;font-size:12.5px;margin:14px 0 0">${su?'Tài khoản này sẽ có quyền quản trị.':'Tài khoản do quản trị viên cấp. Quên mật khẩu, hãy liên hệ quản trị viên.'}</p></div></div>`;
 }
 async function authSubmit(mode){
   const body={username:$('#au').value,password:$('#ap').value};
@@ -241,7 +334,7 @@ function regParts(){
     <datalist id="names">${regs.map(r=>`<option value="${esc(r.name)}">`).join('')}</datalist>
     <label class="row"><input type="checkbox" id="one"> Trường hợp đặc biệt: chỉ 1 buổi</label></div>`
    :`<p>Đăng ký cho: <b>${esc(ME.name)}</b>${mine?` <span class="mute">· đã đăng ký ${mine.days.length} ngày</span>`:''}</p>`}
-   <div class="days" id="dsel">${active.some(Boolean)?'':'<span class="mute">Tuần này chưa có sân nào.</span>'}${DAYS.map((d,i)=>!active[i]?'':`<label data-day="${i}" class="${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);showDay(${i})">${d} ${fmt(wk,i)}<br><small class="mute">${cnt[i]} người đăng ký / ${CT[i].length*S.settings.perCourt} chỗ</small></label>`).join('')}<div id="dlist"></div></div>
+   <div class="days" id="dsel">${active.some(Boolean)?'':'<span class="mute">Tuần này chưa có sân nào.</span>'}${DAYS.map((d,i)=>!active[i]?'':`<label data-day="${i}" class="${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);showDay(${i})"><span class="dblock"><b>${d}</b><i>${dayNum(wk,i)}</i></span><span class="dmain"><span class="dtime">${esc(CT[i].map(c=>c.time).filter(Boolean).join(' · ')||'Có sân')}<span class="mute" style="font-weight:500"> · ${CT[i].length} sân</span></span><span class="dbar"><i class="${cnt[i]/(CT[i].length*S.settings.perCourt)>=.9?'hot':''}" style="width:${Math.min(100,Math.round(cnt[i]/(CT[i].length*S.settings.perCourt)*100))}%"></i></span><small class="mute"><b>${cnt[i]}</b> người đăng ký / ${CT[i].length*S.settings.perCourt} chỗ</small></span><span class="dtick"></span></label>`).join('')}<div id="dlist"></div></div>
    <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
    ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
    list:`<div class="card"><h2>Đã đăng ký (${lst.length})</h2>
@@ -286,17 +379,19 @@ function schView(){
   let used=0,cap=0,emp=0,ca=0,co=0;days.forEach(d=>{const s=sc.sessions[d];used+=s.players.length;cap+=s.capacity;emp+=Math.max(0,s.capacity-s.players.length);ca+=s.courtsAvailable;co+=s.courts.filter(c=>c.length).length});
   const regs=S.week.registrations;
   const under=Object.entries(sc.perMember).filter(([n,ds])=>ds.length<(regs[n]?.minSessions||2));
-  const mineList=Object.keys(sc.sessions).sort().map(d=>{const s=sc.sessions[d];if(!s.players.includes(ME.name))return null;const ts=[...new Set((s.courtLabels||[]).map(t=>(typeof t==='object'?t.time:t)||'').filter(Boolean))];return `<li><b>${DAYS[d]} ${fmt(wk,+d)}</b>${ts.length?' · '+esc(ts.join(' / ')):''}</li>`}).filter(Boolean);
-  const mineCard=`<div class="card" style="border-color:var(--pri)"><h2>Lịch của bạn (${esc(ME.name)})</h2>${mineList.length?`<ul style="margin:0;padding-left:18px">${mineList.join('')}</ul>`:'<span class="mute">Bạn chưa được xếp buổi nào trong tuần này.</span>'}</div>`;
+  const timesOf=s=>[...new Set((s.courtLabels||[]).map(t=>(typeof t==='object'?t.time:t)||'').filter(Boolean))];
+  const mineList=Object.keys(sc.sessions).sort().map(d=>{const s=sc.sessions[d];if(!s.players.includes(ME.name))return null;const ts=timesOf(s);return `<div class="mrow"><b>${DAYS[d]} ${fmt(wk,+d)}</b><span>${esc(ts.join(' / '))}</span></div>`}).filter(Boolean);
+  const mineCard=`<div class="card mine"><h2>Lịch của bạn<br><span style="font-size:18px">${esc(ME.name)}</span></h2>${mineList.length?mineList.join(''):'<span>Bạn chưa được xếp buổi nào trong tuần này.</span>'}</div>`;
   return mineCard+`<div class="card kpi"><div><b>${used}/${cap}</b>chỗ đã dùng</div><div><b>${pct(cap?emp/cap:0)}</b>chỗ trống</div>
    <div><b>${co}/${ca}</b>sân có người</div><div><b>${pct(ca?1-co/ca:0)}</b>sân trống</div></div>
    ${isAdmin()&&sc.warnings.length?`<div class="card warn"><b>Cảnh báo</b><ul>${sc.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}
    <div class="card"><div class="row" style="justify-content:space-between"><h2>Lịch chơi</h2></div>
-   <div class="grid">${days.map(d=>{const s=sc.sessions[d];return `<div class="day"><b>${DAYS[d]} ${fmt(wk,+d)}</b> <span class="${s.overflow?'warn':'mute'}">${s.players.length}/${s.capacity} người</span>${s.overflow?` <span class="warn">· nới tối đa ${S.settings.maxPerCourt}/sân</span>`:''}
-    <div class="bar"><i style="width:${Math.min(100,s.players.length/s.capacity*100)}%"></i></div>
-    <div class="mute" style="margin:2px 0 6px">${(s.courtLabels||[]).map((t,i)=>cl(s.courtLabels,i)).join(' &nbsp;|&nbsp; ')} <span>· cần ${s.courts.length}/${s.courtsAvailable} sân</span></div>
-    ${s.players.length?`<ol class="plist">${s.players.map(n=>`<li><span>${esc(n)}</span></li>`).join('')}</ol>`:'<span class="mute">Trống</span>'}
-    </div>`}).join('')}</div></div>
+   <div class="grid">${days.map(d=>{const s=sc.sessions[d],n=s.players.length,tot=Math.max(s.capacity,n),mineDay=s.players.includes(ME.name);
+    const segs=Array.from({length:tot},(_,i)=>`<i class="${i<n?(i>=s.capacity?'hot':'on'):''}"></i>`).join('');
+    return `<div class="sday${mineDay?' me':''}${s.overflow?' over':''}"><div class="sd-head"><span class="dblock"><b>${DAYS[d]}</b><i>${dayNum(wk,+d)}</i></span>
+     <div class="dmain"><div class="sd-count"><span>${n}<small>/${s.capacity}</small></span><em>${s.courtsAvailable} sân</em></div><div class="segs">${segs}</div>
+     <div class="sd-time">${esc(timesOf(s).join(' · '))}${s.overflow?' · nới tối đa '+S.settings.maxPerCourt+' người/sân':''}</div></div></div>
+     ${n?`<ol class="plist">${s.players.map(p=>`<li${p===ME.name?' class="me"':''}><span>${esc(p)}</span></li>`).join('')}</ol>`:'<div class="mute" style="padding:8px 16px 12px">Trống</div>'}</div>`}).join('')}</div></div>
    ${isAdmin()?`<div class="card"><h2>Theo từng người</h2><table class="stack"><tr><th>Tên</th><th>Đăng ký</th><th>Được xếp</th></tr>
    ${Object.entries(sc.perMember).sort((a,b)=>a[1].length-b[1].length).map(([n,ds])=>`<tr><td><b>${esc(n)}</b></td><td data-l="Đăng ký">${(regs[n]?.days||[]).slice().sort().map(d=>DAYS[d]).join(', ')}</td>
    <td data-l="Được xếp">${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;
