@@ -294,7 +294,6 @@ function render(){
    ${isAdmin()?'<button class="pri" style="margin-left:auto" onclick="assign()">⚙ Phân lịch tự động</button>':''}</div>`;
   if(!isAdmin()&&!['home','reg','list','sch','me'].includes(tab))tab='reg';
   $('#view').innerHTML=bar+({reg:regView,list:listView,courts:courtsView,sch:schView}[tab])();
-  if(tab==='reg'&&viewDay!==null)showDay(viewDay);
 }
 const secOf=k=>({reg:'reg',list:'reg',courts:'reg',sch:'sch'})[k];
 async function go(k,force){
@@ -338,7 +337,7 @@ function regParts(){
     <datalist id="names">${regs.map(r=>`<option value="${esc(r.name)}">`).join('')}</datalist>
     <label class="row"><input type="checkbox" id="one"> Trường hợp đặc biệt: chỉ 1 buổi</label></div>`
    :`<p>Đăng ký cho: <b>${esc(ME.name)}</b>${mine?` <span class="mute">· đã đăng ký ${mine.days.length} ngày</span>`:''}</p>`}
-   <div class="days" id="dsel">${active.some(Boolean)?'':'<span class="mute">Tuần này chưa có sân nào.</span>'}${DAYS.map((d,i)=>!active[i]?'':`<label data-day="${i}" class="${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked);showDay(${i})"><span class="dblock"><b>${d}</b><i>${dayNum(wk,i)}</i></span><span class="dmain"><span class="dtime">${esc(CT[i].map(c=>c.time).filter(Boolean).join(' · ')||'Có sân')}<span class="mute" style="font-weight:500"> · ${CT[i].length} sân</span></span><span class="dbar"><i class="${cnt[i]/(CT[i].length*S.settings.perCourt)>=.9?'hot':''}" style="width:${Math.min(100,Math.round(cnt[i]/(CT[i].length*S.settings.perCourt)*100))}%"></i></span><small class="mute"><b>${cnt[i]}</b> người đăng ký / ${CT[i].length*S.settings.perCourt} chỗ</small></span><span class="dtick"></span></label>`).join('')}<div id="dlist"></div></div>
+   <div class="days" id="dsel">${active.some(Boolean)?'':'<span class="mute">Tuần này chưa có sân nào.</span>'}${DAYS.map((d,i)=>!active[i]?'':`<label data-day="${i}" class="${mine&&mine.days.includes(i)?' on':''}"><input type="checkbox" value="${i}" ${mine&&mine.days.includes(i)?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)"><span class="dblock"><b>${d}</b><i>${dayNum(wk,i)}</i></span><span class="dmain"><span class="dtime">${esc(CT[i].map(c=>c.time).filter(Boolean).join(' · ')||'Có sân')}<span class="mute" style="font-weight:500"> · ${CT[i].length} sân</span></span><span class="dbar"><i class="${cnt[i]/(CT[i].length*S.settings.perCourt)>=.9?'hot':''}" style="width:${Math.min(100,Math.round(cnt[i]/(CT[i].length*S.settings.perCourt)*100))}%"></i></span><small class="mute"><b>${cnt[i]}</b> người đăng ký / ${CT[i].length*S.settings.perCourt} chỗ</small></span><span class="dtick"></span></label>`).join('')}</div>
    <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button><button onclick="openMulti()">Đăng ký cho các tuần khác</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
    <div id="multi"></div>
    ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
@@ -349,22 +348,8 @@ function regParts(){
    </div>`};
 }
 const regView=()=>regParts().reg,listView=()=>regParts().list,courtsView=()=>regParts().courts;
-function showDay(i){
-  viewDay=i;
-  const box=$('#dlist'),sel=$('#dsel'),chip=sel.querySelector('label[data-day="'+i+'"]');
-  const rs=(S.registered||[]).filter(r=>r.days.includes(i));
-  box.className='pop';
-  box.innerHTML=`<b>${DAYS[i]} ${fmt(wk,i)}</b> <span class="mute">· ${rs.length} người đăng ký</span>
-   ${rs.length?`<ol class="plist">${rs.map(r=>`<li><span>${esc(r.name)}${(S.week.registrations[r.name]||{}).minSessions===1?' <span class="mute">(chỉ 1 buổi)</span>':''}${r.name===ME.name?' <span class="mute">(bạn)</span>':''}
-   <span class="mute"> · ${r.days.length} buổi/tuần</span></span></li>`).join('')}</ol>`:'<div class="mute">Chưa có ai đăng ký.</div>'}`;
-  box.style.top=(chip.offsetTop+chip.offsetHeight+6)+'px';
-  box.style.left=Math.max(0,Math.min(chip.offsetLeft,sel.clientWidth-box.offsetWidth))+'px';
-}
-function hideDay(){viewDay=null;const b=$('#dlist');if(b){b.className='';b.innerHTML=''}}
-document.addEventListener('click',e=>{
-  if(viewDay===null||e.target.closest('#dlist')||e.target.closest('#dsel label'))return;
-  hideDay();
-});
+function hideDay(){viewDay=null}
+
 async function openMulti(){
   const box=$('#multi');
   if(box.innerHTML){box.innerHTML='';return}
