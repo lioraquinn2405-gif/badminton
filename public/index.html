@@ -113,6 +113,10 @@ th{text-transform:uppercase;font-size:12px;letter-spacing:.06em}
 .sday.over .sd-count span{color:var(--hot)}
 .segs{display:flex;gap:3px;margin:7px 0 5px}.segs i{flex:1;height:7px;border-radius:2px;background:var(--line)}.segs i.on{background:var(--pri)}.segs i.hot{background:var(--hot)}
 .sd-time{font-size:12.5px;color:var(--mute)}.sday.over .sd-time{color:var(--warn);font-weight:700}
+.sday .plist li button.x{margin-left:auto;border:0;background:transparent;color:var(--warn);padding:0 8px;min-height:32px!important;font-size:16px;line-height:1}
+.sd-add{display:flex;gap:8px;padding:0 16px 14px}
+.sd-add select{flex:1;min-width:0;border:2px solid #D3DDCB;border-radius:10px;padding:8px;background:var(--card);color:inherit;font:inherit}
+.sd-add button.pri{font-size:17px;padding:6px 14px}
 .sday .plist{padding:6px 16px 12px;margin:0;border-top:1px solid var(--line)}
 .plist li.me span{font-weight:800;color:var(--pri)}
 /* đăng nhập */
@@ -202,7 +206,7 @@ const regDefault=()=>clampStart(wkAdd(iso(monday(new Date())),1)); // đăng ký
 // mỗi nhóm trang nhớ tuần riêng: 'reg' (Đăng ký, Danh sách, Sân) và 'sch' (Lịch tuần)
 const weeks={reg:regDefault(),sch:schDefault()};
 let curSec='reg';
-let ME=null,FIRST=false,viewDay=null,tab='home',wk=weeks.reg,S=null,CT=[];
+let USERS=null,ME=null,FIRST=false,viewDay=null,tab='home',wk=weeks.reg,S=null,CT=[];
 const dayNum=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return String(d.getDate()).padStart(2,'0')};
 const fmt=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return `${d.getDate()}/${d.getMonth()+1}`};
 async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
@@ -213,6 +217,7 @@ const isAdmin=()=>ME&&ME.role==='admin';
 async function load(){
   weeks[curSec]=wk;
   S=await api('GET','/api/state?week='+wk);CT=JSON.parse(JSON.stringify(S.week.courts));
+  if(isAdmin()&&tab==='sch'&&!USERS){try{USERS=await api('GET','/api/users')}catch(e){}}
   render()}
 function applyStart(cs){if(!cs)return;CLUB_START=cs;weeks.reg=regDefault();weeks.sch=schDefault();wk=weeks[curSec]}
 async function boot(){
@@ -393,9 +398,25 @@ async function clearWeek(){
   if(!confirm('Chắc chắn xóa? Mọi đăng ký của tuần này sẽ mất.'))return;
   await api('DELETE','/api/week',{week:wk});alert('Đã xóa dữ liệu tuần này.');load()}
 async function assign(){
-  if(S.week.schedule&&!confirm('Tuần này đã có lịch. Phân lại sẽ thay thế lịch hiện tại. Tiếp tục?'))return;
+  if(S.week.schedule&&!confirm(S.week.schedule.edited?'Lịch tuần này đã được CHỈNH TAY. Phân lại sẽ mất mọi chỉnh sửa đó. Tiếp tục?':'Tuần này đã có lịch. Phân lại sẽ thay thế lịch hiện tại. Tiếp tục?'))return;
   await api('POST','/api/assign',{week:wk});
   weeks[curSec]=wk;weeks.sch=wk;curSec='sch';tab='sch';await load()}
+// ô thêm người vào một ngày (chỉ quản trị viên)
+function addBox(d,s){
+  const regDay=new Set((S.registered||[]).filter(r=>r.days.includes(+d)).map(r=>r.name));
+  const all=new Set([...(USERS||[]).map(u=>u.name),...(S.registered||[]).map(r=>r.name)]);
+  const cand=[...all].filter(n=>!s.players.includes(n)).sort((a,b)=>a.localeCompare(b,'vi'));
+  const opt=l=>l.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  const a=cand.filter(n=>regDay.has(n)),b=cand.filter(n=>!regDay.has(n));
+  return `<div class="sd-add"><select id="add_${d}"><option value="">+ Thêm người vào ngày này…</option>${a.length?`<optgroup label="Đã đăng ký ngày này">${opt(a)}</optgroup>`:''}<optgroup label="Thành viên khác">${opt(b)}</optgroup></select><button class="pri" onclick="addToDay(${d})">Thêm</button></div>`}
+async function addToDay(d){
+  const name=$('#add_'+d).value;if(!name){alert('Hãy chọn người cần thêm');return}
+  const s=S.week.schedule.sessions[d];
+  if(s.players.length+1>s.capacity&&!confirm('Ngày này đang có '+s.players.length+' người, thêm nữa sẽ vượt mức '+S.settings.perCourt+' người/sân (tối đa nới '+S.settings.maxPerCourt+'). Vẫn thêm?'))return;
+  await api('POST','/api/schedule/add',{week:wk,day:+d,name});await load()}
+async function rmFromDay(d,name){
+  if(!confirm('Bỏ "'+name+'" khỏi '+DAYS[d]+' '+fmt(wk,+d)+'?'))return;
+  await api('POST','/api/schedule/remove',{week:wk,day:+d,name});await load()}
 function schView(){
   const sc=S.week.schedule;
   if(!sc)return `<div class="card">Tuần này chưa có lịch phân sân.${isAdmin()?` <button class="pri" onclick="assign()">⚙ Phân lịch tự động</button>`:' Vui lòng quay lại sau khi quản trị viên chốt lịch.'}</div>`;
@@ -414,6 +435,7 @@ function schView(){
     <li>Buổi thêm ưu tiên người <b>đăng ký nhiều ngày hơn</b> (4 ngày trước 3 ngày). Cùng số ngày thì <b>ai đăng ký trước</b> được trước.</li>
     <li>Nếu người ưu tiên cao hơn còn thiếu buổi mà chỗ đang do người ưu tiên thấp hơn giữ, hệ thống chuyển người kia sang ngày khác còn chỗ, hoặc lấy lại buổi thêm của họ.</li>
     <li>Chỉ khi quá khó xếp mới nới lên ${S.settings.maxPerCourt} người/sân, và không cho buổi thêm lấn quá ${S.settings.perCourt} người/sân.</li></ol></details>`:''}
+   ${isAdmin()&&sc.edited?`<div class="card" style="border-color:var(--hot)"><b>Lịch này đã được chỉnh tay</b> lúc ${new Date(sc.edited.at).toLocaleString('vi-VN')}. Bấm "Phân lịch tự động" sẽ thay thế mọi chỉnh sửa.</div>`:''}
    ${isAdmin()&&sc.warnings.length?`<div class="card warn"><b>Cảnh báo</b><ul>${sc.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}
    <div class="card"><div class="row" style="justify-content:space-between"><h2>Lịch chơi</h2></div>
    <div class="grid">${days.map(d=>{const s=sc.sessions[d],n=s.players.length,tot=Math.max(s.capacity,n),mineDay=s.players.includes(ME.name);
@@ -421,7 +443,8 @@ function schView(){
     return `<div class="sday${mineDay?' me':''}${s.overflow?' over':''}"><div class="sd-head"><span class="dblock"><b>${DAYS[d]}</b><i>${dayNum(wk,+d)}</i></span>
      <div class="dmain"><div class="sd-count"><span>${n}<small>/${s.capacity}</small></span><em>${s.courtsAvailable} sân</em></div><div class="segs">${segs}</div>
      <div class="sd-time">${esc(timesOf(s).join(' · '))}${s.overflow?' · nới tối đa '+S.settings.maxPerCourt+' người/sân':''}</div></div></div>
-     ${n?`<ol class="plist">${s.players.map(p=>`<li${p===ME.name?' class="me"':''}><span>${esc(p)}</span></li>`).join('')}</ol>`:'<div class="mute" style="padding:8px 16px 12px">Trống</div>'}</div>`}).join('')}</div></div>
+     ${n?`<ol class="plist">${s.players.map(p=>`<li${p===ME.name?' class="me"':''}><span>${esc(p)}</span>${isAdmin()?`<button class="x" title="Bỏ khỏi ngày này" aria-label="Bỏ ${esc(p)} khỏi ngày này" onclick="rmFromDay(${d},${JSON.stringify(p).replace(/"/g,'&quot;')})">✕</button>`:''}</li>`).join('')}</ol>`:'<div class="mute" style="padding:8px 16px 12px">Trống</div>'}
+     ${isAdmin()?addBox(d,s):''}</div>`}).join('')}</div></div>
    ${isAdmin()?`<div class="card"><h2>Theo từng người</h2><table class="stack"><tr><th>Tên</th><th>Đăng ký</th><th>Được xếp</th></tr>
    ${Object.entries(sc.perMember).sort((a,b)=>a[1].length-b[1].length).map(([n,ds])=>`<tr><td><b>${esc(n)}</b></td><td data-l="Đăng ký">${(regs[n]?.days||[]).slice().sort().map(d=>DAYS[d]).join(', ')}</td>
    <td data-l="Được xếp">${ds.map(d=>DAYS[d]).join(', ')||'—'} <span class="mute">(${ds.length})</span></td></tr>`).join('')}</table></div>`:''}`;

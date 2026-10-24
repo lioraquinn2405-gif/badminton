@@ -6,6 +6,15 @@
 const PER_COURT = 8;      // mức ưu tiên: 8 người/sân
 const MAX_PER_COURT = 10; // chỉ dùng khi quá khó xếp
 
+// Chia người vào sân: lấp đầy từng sân tới perCourt người rồi mới sang sân kế; chỉ khi vượt mức thì dàn đều.
+function layoutCourts(names, nCourts, perCourt = PER_COURT) {
+  const layout = Array.from({ length: nCourts }, () => []);
+  if (names.length > nCourts * perCourt) names.forEach((n, i) => layout[i % nCourts].push(n));
+  else names.forEach((n, i) => layout[Math.floor(i / perCourt)].push(n));
+  while (layout.length && !layout[layout.length - 1].length) layout.pop();
+  return layout;
+}
+
 function run({ courts, members, maxPerWeek = 3, history = {}, perCourt = PER_COURT, maxPerCourt = MAX_PER_COURT }) {
   const D = 7;
   const labels = courts.map(c => Array.isArray(c) ? c : Array(c || 0).fill(''));
@@ -141,10 +150,7 @@ function run({ courts, members, maxPerWeek = 3, history = {}, perCourt = PER_COU
     if (!cap[d]) continue;
     const names = ms.filter(m => has(m, d)).map(m => m.name);
     const over = names.length > courts[d] * perCourt;
-    const layout = Array.from({ length: courts[d] }, () => []);
-    if (over) names.forEach((n, i) => layout[i % courts[d]].push(n));
-    else names.forEach((n, i) => layout[Math.floor(i / perCourt)].push(n));
-    while (layout.length && !layout[layout.length - 1].length) layout.pop();
+    const layout = layoutCourts(names, courts[d], perCourt);
     sessions[d] = { courtsAvailable: courts[d], capacity: cap[d], hardCapacity: hard[d], overflow: over,
       players: names, courts: layout, courtLabels: labels[d] };
   }
@@ -152,4 +158,4 @@ function run({ courts, members, maxPerWeek = 3, history = {}, perCourt = PER_COU
   return { sessions, perMember, warnings };
 }
 
-module.exports = { run, PER_COURT, MAX_PER_COURT };
+module.exports = { run, layoutCourts, PER_COURT, MAX_PER_COURT };
