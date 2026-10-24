@@ -194,7 +194,7 @@ const pct=x=>(x*100).toFixed(0)+'%';
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 function monday(d){const x=new Date(d);x.setHours(12);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
 // CLB bắt đầu từ tháng 11/2026: tuần đầu tiên là thứ Hai 02/11/2026, không mở các tuần trước đó
-const CLUB_START='2026-11-02';
+let CLUB_START='2026-11-02'; // máy chủ báo lại giá trị thật khi đăng nhập (có thể đổi để chạy thử)
 const wkAdd=(k,n)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+7*n);return iso(d)};
 const clampStart=k=>k<CLUB_START?CLUB_START:k;
 const schDefault=()=>clampStart(iso(monday(new Date())));          // xem lịch sân: tuần này
@@ -214,8 +214,9 @@ async function load(){
   weeks[curSec]=wk;
   S=await api('GET','/api/state?week='+wk);CT=JSON.parse(JSON.stringify(S.week.courts));
   render()}
+function applyStart(cs){if(!cs)return;CLUB_START=cs;weeks.reg=regDefault();weeks.sch=schDefault();wk=weeks[curSec]}
 async function boot(){
-  const j=await (await fetch('/api/me')).json();ME=j.user;FIRST=j.firstUser;
+  const j=await (await fetch('/api/me')).json();ME=j.user;FIRST=j.firstUser;applyStart(j.clubStart);
   if(ME){tab='home';render()}else showAuth()}
 function showAuth(mode,msg=''){
   document.body.classList.add('auth');document.body.classList.remove('menu');
@@ -236,7 +237,7 @@ async function authSubmit(mode){
   if(mode==='signup')body.name=$('#an').value;
   try{
     const j=await api('POST','/api/'+(mode==='signup'?'signup':'login'),body);
-    ME=j.user;tab='home';render();
+    ME=j.user;applyStart(j.clubStart);tab='home';render();
   }catch(e){}
   return false}
 async function logout(){await api('POST','/api/logout',{});ME=null;S=null;FIRST=false;showAuth()}
@@ -274,7 +275,10 @@ async function doUn(){
   if(!/^[a-z0-9_.-]{3,30}$/.test(u)){alert('Tên đăng nhập phải dài 3–30 ký tự, chỉ gồm chữ thường không dấu, số và các dấu . _ -, không có khoảng trắng');return}
   const r=await api('POST','/api/username',{username:$('#un_new').value,password:$('#un_pw').value});
   ME=r.user;alert('Đã đổi tên đăng nhập. Từ lần sau hãy đăng nhập bằng: '+ME.username);render()}
-function shift(n){const k=wkAdd(wk,n);if(k<CLUB_START)return;wk=k;load()}
+// Thành viên chỉ xem/đăng ký từ tuần khai trương CLB; quản trị viên được lùi về các tuần trước (để chạy thử)
+const minWeek=()=>isAdmin()?'2020-01-06':CLUB_START;
+function shift(n){const k=wkAdd(wk,n);if(k<minWeek())return;wk=k;load()}
+function jumpWeek(v){if(!v)return;const k=iso(monday(new Date(v+'T12:00')));if(k<minWeek())return;wk=k;load()}
 function resetWeek(){wk=curSec==='sch'?schDefault():regDefault();load()}
 function render(){
   document.body.classList.remove('auth');
@@ -289,9 +293,9 @@ function render(){
   if(tab==='users'&&isAdmin())return usersView();
   if(tab==='me'){$('#view').innerHTML=meView();return}
   if(tab==='home'){$('#view').innerHTML=homeView();return}
-  const bar=`<div class="card row weekbar"><button onclick="shift(-1)" ${wk<=CLUB_START?'disabled style="opacity:.35;cursor:default" title="CLB bắt đầu từ 02/11/2026"':''}>‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
+  const bar=`<div class="card row weekbar"><button onclick="shift(-1)" ${wk<=minWeek()?'disabled style="opacity:.35;cursor:default" title="CLB bắt đầu từ '+fmt(CLUB_START)+'/'+CLUB_START.slice(0,4)+'"':''}>‹</button><b>Tuần ${fmt(wk)} – ${fmt(wk,6)}</b><button onclick="shift(1)">›</button>
    <button onclick="resetWeek()">${curSec==='sch'?'Tuần này':'Tuần sau'}</button>
-   ${isAdmin()?'<button class="pri" style="margin-left:auto" onclick="assign()">⚙ Phân lịch tự động</button>':''}</div>`;
+   ${isAdmin()?`<input type="date" value="${wk}" onchange="jumpWeek(this.value)" title="Chọn một ngày để nhảy tới tuần chứa ngày đó" style="width:auto;background:transparent;color:var(--lime);border-color:rgba(255,255,255,.22);height:40px;padding:0 8px;color-scheme:dark"><button class="pri" style="margin-left:auto" onclick="assign()">⚙ Phân lịch tự động</button>`:''}</div>`;
   if(!isAdmin()&&!['home','reg','list','sch','me'].includes(tab))tab='reg';
   $('#view').innerHTML=bar+({reg:regView,list:listView,courts:courtsView,sch:schView}[tab])();
 }
@@ -345,6 +349,7 @@ function regParts(){
    ${lst.length?`<table class="stack"><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th>${adm?'<th></th>':''}</tr>`+
    lst.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name)).map(r=>`<tr><td><b>${esc(r.name)}</b>${!adm&&r.name===ME.name?' <span class="mute">(bạn)</span>':''}</td><td data-l="Ngày">${r.days.slice().sort().map(d=>DAYS[d]).join(', ')}</td><td data-l="Số buổi">${r.days.length} buổi${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
    ${adm?`<td class="num act"><button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button></td>`:''}</tr>`).join('')+'</table>':'<span class="mute">Chưa có ai đăng ký.</span>'}
+   ${adm?`<p style="margin-top:14px"><button onclick="clearWeek()" style="border-color:var(--hot);color:var(--warn)">Xóa đăng ký &amp; lịch đã phân của tuần này</button> <span class="mute">(dùng khi chạy thử)</span></p>`:''}
    </div>`};
 }
 const regView=()=>regParts().reg,listView=()=>regParts().list,courtsView=()=>regParts().courts;
@@ -383,6 +388,10 @@ async function reg(){
 function edit(n){tab='reg';render();const r=S.week.registrations[n];$('#nm').value=n;$('#one').checked=r.minSessions===1;
   document.querySelectorAll('#dsel input').forEach(i=>{i.checked=r.days.includes(+i.value);i.parentNode.classList.toggle('on',i.checked)});scrollTo(0,0)}
 async function del(n){if(typeof n==='string'&&n[0]==='"')n=JSON.parse(n);if(confirm('Xóa đăng ký của '+n+'?')){await api('DELETE','/api/register',{week:wk,name:n});load()}}
+async function clearWeek(){
+  if(!confirm('Xóa TOÀN BỘ đăng ký và lịch đã phân của tuần '+fmt(wk)+' – '+fmt(wk,6)+'?\nViệc này không hoàn tác được.'))return;
+  if(!confirm('Chắc chắn xóa? Mọi đăng ký của tuần này sẽ mất.'))return;
+  await api('DELETE','/api/week',{week:wk});alert('Đã xóa dữ liệu tuần này.');load()}
 async function assign(){
   if(S.week.schedule&&!confirm('Tuần này đã có lịch. Phân lại sẽ thay thế lịch hiện tại. Tiếp tục?'))return;
   await api('POST','/api/assign',{week:wk});
