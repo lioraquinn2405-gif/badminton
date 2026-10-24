@@ -21,6 +21,7 @@ function run({ courts, members, maxPerWeek = 3, history = {}, perCourt = PER_COU
     min: Math.max(1, m.minSessions || 2),
     days: [...new Set(m.days)].filter(d => cap[d] > 0).sort((a, b) => a - b),
     reqDays: [...new Set(m.days)].length,
+    at: m.at || '', // thời điểm đăng ký (ISO): sớm hơn = được ưu tiên hơn khi bằng nhau
     got: [],
   }));
   const byName = Object.fromEntries(ms.map(m => [m.name, m]));
@@ -31,8 +32,10 @@ function run({ courts, members, maxPerWeek = 3, history = {}, perCourt = PER_COU
   const add = (m, d) => { m.got.push(d); load[d]++; };
 
   // Pha 1: đảm bảo số buổi tối thiểu, người ít lựa chọn trước
+  // đăng ký sớm hơn thì xét trước khi bằng nhau; người chưa có mốc thời gian xếp sau cùng
+  const earlier = (a, b) => (a.at || '\uffff').localeCompare(b.at || '\uffff');
   const order = [...ms].sort((a, b) =>
-    a.days.length - b.days.length || hist(a.name) - hist(b.name) || a.name.localeCompare(b.name));
+    a.days.length - b.days.length || earlier(a, b) || hist(a.name) - hist(b.name) || a.name.localeCompare(b.name));
   for (const m of order) {
     const need = Math.min(m.min, m.days.length);
     if (m.days.length < m.min) {
@@ -57,7 +60,8 @@ function run({ courts, members, maxPerWeek = 3, history = {}, perCourt = PER_COU
           if (has(m, b) || load[b] >= hard[b]) continue;
           const before = ratio(a) ** 2 + ratio(b) ** 2;
           const after = ((load[a] - 1) / cap[a]) ** 2 + ((load[b] + 1) / cap[b]) ** 2;
-          if (after < before - 1e-9) {
+          // chỉ chuyển nếu ngày đến vẫn trong mức ưu tiên (8/sân), hoặc ngày đi đang bị nới quá mức đó
+          if (after < before - 1e-9 && (load[b] < cap[b] || load[a] > cap[a])) {
             m.got = m.got.filter(x => x !== a); load[a]--; add(m, b); moved = true; break;
           }
         }
@@ -66,18 +70,59 @@ function run({ courts, members, maxPerWeek = 3, history = {}, perCourt = PER_COU
     if (!moved) break;
   }
 
-  // Pha 2: lấp chỗ trống bằng buổi thêm (tới maxPerWeek), ưu tiên ngày vắng nhất,
-  // người nhiều buổi ít nhất / đăng ký ít ngày hơn được xét trước
+  // Pha 2: chia các chỗ còn dư (sau khi ai cũng đủ số buổi tối thiểu) thành các vòng, mỗi vòng thêm 1 buổi cho mỗi người.
+  // Thứ tự ưu tiên: đăng ký NHIỀU ngày hơn trước (4 ngày trước 3 ngày), bằng nhau thì ĐĂNG KÝ SỚM hơn trước.
+  // Buổi thêm chỉ lấp tới mức 8 người/sân và tối đa maxPerWeek buổi/người; chọn ngày đang vắng nhất trong số ngày họ đăng ký.
+  const priority = [...ms].sort((a, b) =>
+    b.days.length - a.days.length || earlier(a, b) || hist(a.name) - hist(b.name) || a.name.localeCompare(b.name));
   for (;;) {
-    const days = [...Array(D).keys()].filter(d => cap[d] && load[d] < cap[d]).sort((a, b) => ratio(a) - ratio(b) || a - b);
-    let done = false;
-    for (const d of days) {
-      const c = ms.filter(m => m.days.includes(d) && !has(m, d) && m.got.length < maxPerWeek);
-      if (!c.length) continue;
-      c.sort((a, b) => a.got.length - b.got.length || a.days.length - b.days.length || hist(a.name) - hist(b.name) || a.name.localeCompare(b.name));
-      add(c[0], d); done = true; break;
+    let any = false;
+    for (const m of priority) {
+      if (m.got.length >= Math.min(maxPerWeek, m.days.length)) continue;
+      const cand = m.days.filter(d => !has(m, d) && load[d] < cap[d]);
+      if (!cand.length) continue;
+      cand.sort((a, b) => (ratio(a) + 0.15 * adj(m, a)) - (ratio(b) + 0.15 * adj(m, b)) || a - b);
+      add(m, cand[0]); any = true;
     }
-    if (!done) break;
+    if (!any) break;
+  }
+
+  // Sửa theo ưu tiên: nếu người ưu tiên cao hơn (y) còn thiếu buổi mà ngày y muốn đã đầy do người ưu tiên THẤP hơn giữ,
+  // thì nhường chỗ: người kia bỏ buổi thêm của họ, hoặc chuyển sang ngày khác (có thể kéo theo chuỗi 1-3 người dời chỗ).
+  // Không bao giờ làm ai mất buổi tối thiểu, và chỉ dời người ưu tiên thấp hơn y.
+  const rankOf = new Map(priority.map((m, i) => [m, i]));
+  const occupants = d => ms.filter(m => has(m, d));
+  function makeRoom(d, rank, depth, seen) {
+    const zs = occupants(d).filter(z => rankOf.get(z) > rank && !seen.has(z)).sort((a, b) => rankOf.get(b) - rankOf.get(a)); // thấp nhất trước
+    for (const z of zs) {
+      if (z.got.length - 1 >= Math.min(z.min, z.days.length)) { z.got = z.got.filter(v => v !== d); load[d]--; return true; } // z chỉ mất buổi thêm
+    }
+    for (const z of zs) {
+      const alts = z.days.filter(e => !has(z, e) && e !== d).sort((a, b) => ratio(a) - ratio(b) || a - b);
+      for (const e of alts) {
+        if (load[e] < cap[e]) { z.got = z.got.filter(v => v !== d); load[d]--; add(z, e); return true; }
+      }
+      if (depth > 0) {
+        seen.add(z);
+        for (const e of alts) {
+          if (makeRoom(e, rank, depth - 1, seen)) { z.got = z.got.filter(v => v !== d); load[d]--; add(z, e); return true; }
+        }
+        seen.delete(z);
+      }
+    }
+    return false;
+  }
+  for (let pass = 0; pass < 400; pass++) {
+    let moved = false;
+    for (const y of priority) {
+      if (y.got.length >= Math.min(maxPerWeek, y.days.length)) continue;
+      for (const d of y.days) {
+        if (has(y, d)) continue;
+        if (load[d] < cap[d] || makeRoom(d, rankOf.get(y), 3, new Set([y]))) { add(y, d); moved = true; break; }
+      }
+      if (moved) break;
+    }
+    if (!moved) break;
   }
 
   // Ngày bị nới quá 8/sân: ai đã đủ số buổi tối thiểu ở các ngày khác thì chỉ giữ các ngày đó

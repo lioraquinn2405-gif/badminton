@@ -399,6 +399,12 @@ function schView(){
   const mineCard=`<div class="card mine"><h2>Lịch của bạn<br><span style="font-size:18px">${esc(ME.name)}</span></h2>${mineList.length?mineList.join(''):'<span>Bạn chưa được xếp buổi nào trong tuần này.</span>'}</div>`;
   return mineCard+`<div class="card kpi"><div><b>${used}/${cap}</b>chỗ đã dùng</div><div><b>${pct(cap?emp/cap:0)}</b>chỗ trống</div>
    <div><b>${co}/${ca}</b>sân có người</div><div><b>${pct(ca?1-co/ca:0)}</b>sân trống</div></div>
+   ${isAdmin()?`<details class="card"><summary style="cursor:pointer"><b>Quy tắc phân lịch tự động</b></summary><ol style="margin:8px 0 0;padding-left:20px;line-height:1.6">
+    <li><b>Ai cũng đủ số buổi tối thiểu trước</b> (mặc định 2 buổi). Người đăng ký ít ngày được xếp trước vì ít lựa chọn; bằng nhau thì ai đăng ký sớm hơn xếp trước.</li>
+    <li><b>Chỗ còn dư</b> (sau khi mọi người đã đủ buổi tối thiểu) được chia cho buổi thêm, tối đa ${S.settings.maxPerWeek||3} buổi/người, tới mức ${S.settings.perCourt} người/sân.</li>
+    <li>Buổi thêm ưu tiên người <b>đăng ký nhiều ngày hơn</b> (4 ngày trước 3 ngày). Cùng số ngày thì <b>ai đăng ký trước</b> được trước.</li>
+    <li>Nếu người ưu tiên cao hơn còn thiếu buổi mà chỗ đang do người ưu tiên thấp hơn giữ, hệ thống chuyển người kia sang ngày khác còn chỗ, hoặc lấy lại buổi thêm của họ.</li>
+    <li>Chỉ khi quá khó xếp mới nới lên ${S.settings.maxPerCourt} người/sân, và không cho buổi thêm lấn quá ${S.settings.perCourt} người/sân.</li></ol></details>`:''}
    ${isAdmin()&&sc.warnings.length?`<div class="card warn"><b>Cảnh báo</b><ul>${sc.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}
    <div class="card"><div class="row" style="justify-content:space-between"><h2>Lịch chơi</h2></div>
    <div class="grid">${days.map(d=>{const s=sc.sessions[d],n=s.players.length,tot=Math.max(s.capacity,n),mineDay=s.players.includes(ME.name);
