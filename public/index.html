@@ -227,7 +227,7 @@ const regDefault=()=>clampStart(wkAdd(iso(monday(new Date())),1)); // đăng ký
 // mỗi nhóm trang nhớ tuần riêng: 'reg' (Đăng ký, Danh sách, Sân) và 'sch' (Lịch tuần)
 const weeks={reg:regDefault(),sch:schDefault()};
 let curSec='reg';
-let listFilter='all',USERS=null,ME=null,FIRST=false,viewDay=null,tab='home',wk=weeks.reg,S=null,CT=[];
+let statFilter='all',STATW=null,USERS=null,ME=null,FIRST=false,viewDay=null,tab='home',wk=weeks.reg,S=null,CT=[];
 const dayNum=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return String(d.getDate()).padStart(2,'0')};
 const fmt=(k,i=0)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+i);return `${d.getDate()}/${d.getMonth()+1}`};
 async function api(m,p,b){const r=await fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
@@ -352,12 +352,7 @@ function regParts(){
   const w=S.week,regs=Object.values(w.registrations);
   const active=CT.map(c=>c.length>0);
   const cnt=S.counts, adm=isAdmin(), mine=adm?null:w.registrations[ME.name];
-  const regList=adm?regs:(S.registered||[]).map(r=>({...r}));
-  const regNames=new Set(regList.map(r=>r.name));
-  const allRows=[...regList,...(S.roster||[]).filter(n=>!regNames.has(n)).map(n=>({name:n,days:[],none:true}))];
-  const cnt3={all:allRows.length,none:allRows.filter(r=>r.days.length===0).length,low:allRows.filter(r=>r.days.length===1).length,ok:allRows.filter(r=>r.days.length>=2).length};
-  const lst=allRows.filter(r=>listFilter==='all'||(listFilter==='none'&&r.days.length===0)||(listFilter==='low'&&r.days.length===1)||(listFilter==='ok'&&r.days.length>=2));
-  const chip=(k,l)=>`<button class="fchip${listFilter===k?' on':''}" onclick="setListFilter('${k}')">${l} <b>${cnt3[k]}</b></button>`;
+  const lst=adm?regs:(S.registered||[]).map(r=>({...r}));
   return {courts:`<div class="card"><h2>Sân & khung giờ từng ngày <span class="mute">(ưu tiên ${S.settings.perCourt} người/sân, quá khó xếp mới nới tới ${S.settings.maxPerCourt})</span></h2>
    <div class="grid">${DAYS.map((d,i)=>`<div class="day"><b>${d} ${fmt(wk,i)}</b> <span class="mute">· ${cnt[i]} người đăng ký</span>
     ${CT[i].map((t,j)=>`<div class="row" style="margin-top:6px"><span class="row" style="gap:4px"><b>Sân</b><input type="text" inputmode="numeric" value="${esc((t.name||'').replace(/^Sân\s*/i,''))}" placeholder="${j+1}" size="3" style="width:56px;text-align:center" oninput="CT[${i}][${j}].name=this.value.trim()?'Sân '+this.value.trim():''"></span>
@@ -376,11 +371,10 @@ function regParts(){
    <p><button class="pri" onclick="reg()">${mine?'Cập nhật đăng ký':'Đăng ký'}</button><button onclick="openMulti()">Đăng ký cho các tuần khác</button>${mine?` <button onclick="del(${esc(JSON.stringify(JSON.stringify(ME.name)))})">Hủy đăng ký</button>`:''}</p>
    <div id="multi"></div>
    ${adm?'':'<p class="mute">Mỗi tuần cần tham gia tối thiểu 2 buổi, hãy chọn từ 2 ngày trở lên. Quản trị viên sẽ phân sân sau khi chốt đăng ký.</p>'}</div>`,
-   list:`<div class="card"><h2>Danh sách đăng ký (${lst.length}${listFilter==='all'?'':'/'+cnt3.all})</h2>
-   <div class="row fchips" style="margin-bottom:10px">${chip('all','Tất cả')}${chip('none','Chưa đăng ký buổi nào')}${chip('low','Đăng ký dưới 2 buổi')}${chip('ok','Đăng ký từ 2 buổi trở lên')}</div>
+   list:`<div class="card"><h2>Đã đăng ký (${lst.length})</h2>
    ${lst.length?`<table class="stack"><tr><th>Tên</th><th>Ngày</th><th>Số buổi</th>${adm?'<th></th>':''}</tr>`+
-   lst.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name,'vi')).map(r=>`<tr><td><b>${esc(r.name)}</b>${!adm&&r.name===ME.name?' <span class="mute">(bạn)</span>':''}</td><td data-l="Ngày">${r.days.length?r.days.slice().sort().map(d=>DAYS[d]).join(', '):'<span class="mute">—</span>'}</td><td data-l="Số buổi">${r.days.length?r.days.length+' buổi':'<span class="warn">Chưa đăng ký</span>'}${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
-   ${adm?`<td class="num act">${r.none?`<button onclick='editNew(${JSON.stringify(r.name)})'>Đăng ký hộ</button>`:`<button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button>`}</td>`:''}</tr>`).join('')+'</table>':'<span class="mute">Không có ai thuộc nhóm này.</span>'}
+   lst.sort((a,b)=>a.days.length-b.days.length||a.name.localeCompare(b.name,'vi')).map(r=>`<tr><td><b>${esc(r.name)}</b>${!adm&&r.name===ME.name?' <span class="mute">(bạn)</span>':''}</td><td data-l="Ngày">${r.days.slice().sort().map(d=>DAYS[d]).join(', ')}</td><td data-l="Số buổi">${r.days.length} buổi${r.minSessions===1?' <span class="mute">(đặc biệt: chỉ 1 buổi)</span>':''}</td>
+   ${adm?`<td class="num act"><button onclick='edit(${JSON.stringify(r.name)})'>Sửa</button> <button onclick='del(${JSON.stringify(r.name)})'>Xóa</button></td>`:''}</tr>`).join('')+'</table>':'<span class="mute">Chưa có ai đăng ký.</span>'}
    ${adm?`<p style="margin-top:14px"><button onclick="clearWeek()" style="border-color:var(--hot);color:var(--warn)">Xóa đăng ký &amp; lịch đã phân của tuần này</button> <span class="mute">(dùng khi chạy thử)</span></p>`:''}
    </div>`};
 }
@@ -540,7 +534,7 @@ async function stats(){
   const keys=s.weeks.map(w=>w.week);
   if(!statWeek||!keys.includes(statWeek))statWeek=keys.includes(wk)?wk:(keys.filter(k=>k<=schDefault()).pop()||keys[keys.length-1]||null);
   $('#view').innerHTML=`<div class="printhead"><h1>Báo cáo thống kê CLB cầu lông</h1><div>In lúc ${new Date().toLocaleString('vi-VN')}</div></div>
-  <div class="card row noprint" style="justify-content:space-between"><h2 style="margin:0">Thống kê</h2><button class="pri" onclick="window.print()">In báo cáo</button></div>
+  <div class="card row noprint" style="justify-content:space-between"><h2 style="margin:0">Thống kê</h2><div class="row"><button onclick="exportWeek()">Xuất Excel: tuần đang xem</button><button onclick="exportAll()">Xuất Excel: tổng hợp</button><button class="pri" onclick="window.print()">In báo cáo</button></div></div>
   <div class="card kpi"><div><b>${s.overall.weeks}</b>tuần đã phân lịch</div><div><b>${s.overall.reg}</b>lượt đăng ký (người-ngày)</div><div><b>${s.overall.used}</b>lượt tham gia</div><div><b>${pc(s.overall.response)}</b>mức đáp ứng chung</div></div>
   <div id="wkdetail"></div>
   <div class="card"><h2>Tất cả các tuần</h2><p class="mute noprint" style="margin:0 0 8px">Bấm vào một tuần để xem chi tiết ở trên.</p>${s.weeks.length?`<table class="stack"><tr><th>Tuần</th><th class="num">Số người đăng ký</th><th class="num">Đăng ký (người-ngày)</th><th class="num">Tham gia</th><th class="num">Sức chứa</th><th class="num">Đáp ứng</th><th class="num">Sử dụng chỗ</th></tr>
@@ -550,11 +544,9 @@ async function stats(){
   <div class="card"><h2>Mức lấp đầy theo thứ (tất cả các tuần)</h2><table class="stack"><tr><th>Thứ</th><th class="num">Số tuần</th><th class="num">Đăng ký</th><th class="num">Tham gia</th><th class="num">Sức chứa</th><th class="num">Lấp đầy</th></tr>
   ${s.days.map((d,i)=>d.weeks||d.reg?`<tr><td><b>${DAYS[i]}</b></td><td class="num" data-l="Số tuần">${d.weeks}</td><td class="num" data-l="Đăng ký">${d.reg}</td><td class="num" data-l="Tham gia">${d.used}</td><td class="num" data-l="Sức chứa">${d.cap}</td><td class="num" data-l="Lấp đầy">${d.cap?pct(d.fill):'—'}</td></tr>`:'').join('')}</table></div>`;
   if(statWeek)loadStatWeek(statWeek)}
-function setListFilter(k){listFilter=k;render()}
-function editNew(n){tab='reg';render();$('#nm').value=n;scrollTo(0,0)}
 function pickStatWeek(k){statWeek=k;stats()}
 async function loadStatWeek(k){
-  const d=await api('GET','/api/stats/week?week='+k);const t=d.totals;
+  const d=await api('GET','/api/stats/week?week='+k);STATW=d;const t=d.totals;
   const keys=STATS.weeks.map(w=>w.week),i=keys.indexOf(k);
   const nav=`<div class="row noprint"><button ${i<=0?'disabled style="opacity:.35"':''} onclick="pickStatWeek('${keys[i-1]}')">‹ Tuần trước</button><button ${i>=keys.length-1?'disabled style="opacity:.35"':''} onclick="pickStatWeek('${keys[i+1]}')">Tuần sau ›</button></div>`;
   $('#wkdetail').innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Tuần ${fmt(k)} – ${fmt(k,6)}</h2>${nav}</div>
@@ -565,7 +557,42 @@ async function loadStatWeek(k){
   ${d.perDay.map(x=>`<tr><td><b>${DAYS[x.day]} ${fmt(k,x.day)}</b>${x.times.length?' <span class="mute">'+esc(x.times.join(' · '))+'</span>':''}</td><td class="num" data-l="Sân">${x.courts}</td><td class="num" data-l="Chỗ">${x.cap}</td><td class="num" data-l="Đăng ký">${x.reg}</td><td class="num" data-l="Tham gia">${x.part==null?'—':x.part}</td><td class="num" data-l="Đăng ký/sân">${nz(x.regPerCourt)}</td><td class="num" data-l="Tham gia/sân">${nz(x.partPerCourt)}</td><td class="num" data-l="Đáp ứng">${pc(x.response)}</td><td class="num" data-l="Còn trống">${x.free==null?'—':x.free}</td><td class="num${x.short?' warn':''}" data-l="Chưa được xếp">${x.short==null?'—':x.short}</td></tr>`).join('')}
   <tr style="font-weight:800"><td>Cả tuần</td><td class="num" data-l="Sân">${t.courts}</td><td class="num" data-l="Chỗ">${t.cap}</td><td class="num" data-l="Đăng ký">${t.reg}</td><td class="num" data-l="Tham gia">${t.part==null?'—':t.part}</td><td class="num" data-l="Đăng ký/sân">${nz(t.regPerCourt)}</td><td class="num" data-l="Tham gia/sân">${nz(t.partPerCourt)}</td><td class="num" data-l="Đáp ứng">${pc(t.response)}</td><td class="num" data-l="Còn trống">${t.part==null?'—':Math.max(0,t.cap-t.part)}</td><td class="num" data-l="Chưa được xếp">${t.part==null?'—':Math.max(0,t.reg-t.part)}</td></tr></table>
   <p class="mute" style="margin:8px 0 0">Trung bình mỗi buổi: <b>${nz(t.regPerSession)}</b> người đăng ký, <b>${nz(t.partPerSession)}</b> người tham gia. Mỗi sân tính ${S&&S.settings?S.settings.perCourt:8} người; đáp ứng = tham gia / đăng ký.</p></div>
-  <div class="card"><h2>Tần suất từng thành viên trong tuần</h2><table class="stack"><tr><th>Tên</th><th>Ngày đăng ký</th><th class="num">Số ngày đăng ký</th><th>Ngày tham gia</th><th class="num">Số buổi tham gia</th><th class="num">Đáp ứng</th></tr>
-  ${d.members.map(m=>`<tr><td><b>${esc(m.name)}</b></td><td data-l="Ngày đăng ký">${dnames(m.regDays)}</td><td class="num" data-l="Số ngày đăng ký">${m.regDays.length}</td><td data-l="Ngày tham gia">${dnames(m.gotDays)}</td><td class="num" data-l="Số buổi tham gia">${m.gotDays==null?'—':m.gotDays.length}</td><td class="num" data-l="Đáp ứng">${pc(m.response)}</td></tr>`).join('')}</table></div>`}
+  <div class="card" id="statmembers">${statMembersHtml()}</div>`}
+// ---- Xuất Excel: file .xls dạng bảng (mở được bằng Excel, LibreOffice; giữ nguyên tiếng Việt)
+const xe=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function xlsHtml(title,secs){
+  const tbl=sc=>`<h3>${xe(sc.title)}</h3><table border="1"><tr>${sc.head.map(h=>`<th style="background:#D2FF3C">${xe(h)}</th>`).join('')}</tr>${sc.rows.map(r=>`<tr>${r.map(c=>`<td>${xe(c)}</td>`).join('')}</tr>`).join('')}</table><br>`;
+  return `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><title>${xe(title)}</title></head><body><h2>${xe(title)}</h2><p>Xuất lúc ${xe(new Date().toLocaleString('vi-VN'))}</p>${secs.map(tbl).join('')}</body></html>`}
+function saveXls(name,html){
+  const blob=new Blob(['\ufeff'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function statRows(){const n=m=>m.regDays.length;return STATW.members.filter(m=>statFilter==='all'||(statFilter==='none'&&n(m)===0)||(statFilter==='low'&&n(m)===1)||(statFilter==='ok'&&n(m)>=2))}
+const FLABEL={all:'tất cả thành viên',none:'chưa đăng ký buổi nào',low:'đăng ký dưới 2 buổi',ok:'đăng ký từ 2 buổi trở lên'};
+function weekXls(){
+  const d=STATW,t=d.totals,k=d.week;
+  return xlsHtml('Thống kê CLB cầu lông - tuần '+fmt(k)+' – '+fmt(k,6),[
+   {title:'Tổng quan tuần',head:['Chỉ số','Giá trị'],rows:[['Số người đăng ký',t.people],['Lượt đăng ký (người-ngày)',t.reg],['Lượt tham gia (người-ngày)',t.part==null?'':t.part],['Mức đáp ứng (tham gia / đăng ký)',pc(t.response)],['Nhu cầu / sức chứa',pc(t.demandVsCap)],['Tổng sân trong tuần',t.courts],['Sức chứa (chỗ)',t.cap],['Mức sử dụng chỗ',pc(t.usage)],['Đăng ký / sân',nz(t.regPerCourt)],['Tham gia / sân',nz(t.partPerCourt)],['Đăng ký trung bình mỗi buổi',nz(t.regPerSession)],['Tham gia trung bình mỗi buổi',nz(t.partPerSession)]]},
+   {title:'Người / buổi và người / sân',head:['Buổi','Giờ sân','Sân','Chỗ','Đăng ký','Tham gia','Đăng ký / sân','Tham gia / sân','Đáp ứng','Còn trống','Chưa được xếp'],rows:d.perDay.map(x=>[DAYS[x.day]+' '+fmt(k,x.day),x.times.join(' · '),x.courts,x.cap,x.reg,x.part==null?'':x.part,nz(x.regPerCourt),nz(x.partPerCourt),pc(x.response),x.free==null?'':x.free,x.short==null?'':x.short])},
+   {title:'Tần suất từng thành viên trong tuần ('+FLABEL[statFilter]+')',head:['Tên','Ngày đăng ký','Số ngày đăng ký','Ngày tham gia','Số buổi tham gia','Đáp ứng'],rows:statRows().map(m=>[m.name,dnames(m.regDays),m.regDays.length,dnames(m.gotDays),m.gotDays==null?'':m.gotDays.length,pc(m.response)])}])}
+function allXls(){
+  const s=STATS;
+  return xlsHtml('Thống kê CLB cầu lông - tổng hợp',[
+   {title:'Tất cả các tuần',head:['Tuần','Số người đăng ký','Đăng ký (người-ngày)','Tham gia','Sức chứa','Đáp ứng','Sử dụng chỗ'],rows:s.weeks.map(w=>[fmt(w.week)+' – '+fmt(w.week,6)+(w.scheduled?'':' (chưa phân lịch)'),w.people,w.reg,w.scheduled?w.used:'',w.scheduled?w.cap:'',pc(w.response),w.scheduled&&w.cap?pct(w.used/w.cap):''])},
+   {title:'Tần suất của tất cả thành viên',head:['Tên','Số tuần tham gia','Tổng buổi','Buổi / tuần','Đã đăng ký (ngày)','Được xếp / đăng ký','Tuần đủ tối thiểu'],rows:s.members.map(m=>[m.name,m.weeks,m.sessions,m.weeks?m.avgPerWeek.toFixed(1):'',m.registeredDays,m.registeredDays?pct(m.attendRate):'',m.weeks?m.metMin+'/'+m.weeks:''])},
+   {title:'Mức lấp đầy theo thứ',head:['Thứ','Số tuần','Đăng ký','Tham gia','Sức chứa','Lấp đầy'],rows:s.days.map((x,i)=>[DAYS[i],x.weeks,x.reg,x.used,x.cap,x.cap?pct(x.fill):'']).filter(r=>r[1]||r[2])}])}
+function exportWeek(){if(!STATW){alert('Chưa có dữ liệu tuần để xuất');return}saveXls('thong-ke-tuan-'+STATW.week+'.xls',weekXls())}
+function exportAll(){if(!STATS){return}saveXls('thong-ke-tong-hop.xls',allXls())}
+function setStatFilter(k){statFilter=k;const el=$('#statmembers');if(el)el.innerHTML=statMembersHtml()}
+function statMembersHtml(){
+  const d=STATW,all=d.members,n=m=>m.regDays.length;
+  const cnt={all:all.length,none:all.filter(m=>n(m)===0).length,low:all.filter(m=>n(m)===1).length,ok:all.filter(m=>n(m)>=2).length};
+  const rows=all.filter(m=>statFilter==='all'||(statFilter==='none'&&n(m)===0)||(statFilter==='low'&&n(m)===1)||(statFilter==='ok'&&n(m)>=2));
+  const chip=(k,l)=>`<button class="fchip${statFilter===k?' on':''}" onclick="setStatFilter('${k}')">${l} <b>${cnt[k]}</b></button>`;
+  const label={all:'tất cả thành viên',none:'chưa đăng ký buổi nào',low:'đăng ký dưới 2 buổi',ok:'đăng ký từ 2 buổi trở lên'}[statFilter];
+  return `<h2>Tần suất từng thành viên trong tuần</h2>
+  <div class="row fchips noprint" style="margin-bottom:10px">${chip('all','Tất cả')}${chip('none','Chưa đăng ký buổi nào')}${chip('low','Đăng ký dưới 2 buổi')}${chip('ok','Đăng ký từ 2 buổi trở lên')}</div>
+  <p class="mute" style="margin:0 0 8px">Đang xem: <b>${label}</b> (${rows.length}/${all.length} người)</p>
+  ${rows.length?`<table class="stack"><tr><th>Tên</th><th>Ngày đăng ký</th><th class="num">Số ngày đăng ký</th><th>Ngày tham gia</th><th class="num">Số buổi tham gia</th><th class="num">Đáp ứng</th></tr>
+  ${rows.map(m=>`<tr><td><b>${esc(m.name)}</b></td><td data-l="Ngày đăng ký">${dnames(m.regDays)}</td><td class="num" data-l="Số ngày đăng ký">${m.regDays.length}</td><td data-l="Ngày tham gia">${dnames(m.gotDays)}</td><td class="num" data-l="Số buổi tham gia">${m.gotDays==null?'—':m.gotDays.length}</td><td class="num" data-l="Đáp ứng">${pc(m.response)}</td></tr>`).join('')}</table>`:'<span class="mute">Không có ai thuộc nhóm này.</span>'}`}
 boot();
 </script></body></html>
